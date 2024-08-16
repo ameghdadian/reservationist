@@ -140,7 +140,7 @@ func (a *Auth) Authorize(ctx context.Context, claims Claims, userID uuid.UUID, r
 		"UserID":  userID,
 	}
 
-	if err := a.opaPolicyEvaluation(ctx, opaAuthentication, rule, input); err != nil {
+	if err := a.opaPolicyEvaluation(ctx, opaAuthorization, rule, input); err != nil {
 		return fmt.Errorf("rego evaluation failed: %w", err)
 	}
 

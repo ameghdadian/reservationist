@@ -3,6 +3,7 @@ package v1
 import (
 	"os"
 
+	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/business/web/v1/mid"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
@@ -12,6 +13,7 @@ type APIMuxConfig struct {
 	Build    string
 	Shutdown chan os.Signal
 	Log      *logger.Logger
+	Auth     *auth.Auth
 }
 
 type RouterAdder interface {

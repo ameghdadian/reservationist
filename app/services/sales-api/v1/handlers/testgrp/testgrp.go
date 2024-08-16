@@ -26,7 +26,6 @@ func New(build string, log *logger.Logger) *Handlers {
 func (h *Handlers) TestGrpHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	if rand.Float64() > 0.5 {
 		h.log.Error(ctx, "bad happend")
-		panic("lala")
 		return response.NewError(errors.New("TRUSTED ERROR"), http.StatusBadRequest)
 	}
 
