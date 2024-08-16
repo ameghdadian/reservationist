@@ -3,11 +3,14 @@ package cmd
 import (
 	"context"
 	"errors"
+	"expvar"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/ameghdadian/service/business/web/debug"
 	v1 "github.com/ameghdadian/service/business/web/v1"
@@ -48,10 +51,23 @@ func Main(build string, routeAdder v1.RouterAdder) error {
 func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.RouterAdder) error {
 
 	// ------------------------------------------------------------------------------
+	// GOMAXPROCS
+
+	log.Info(ctx, "startup", "GOMAXPROCS", runtime.GOMAXPROCS(0), "build", build)
+
+	// ------------------------------------------------------------------------------
 	// Configuration
 
 	cfg := struct {
 		conf.Version
+		Web struct {
+			ReadTimeout     time.Duration `conf:"default:5s"`
+			WriteTimeout    time.Duration `conf:"default:10s"`
+			IdleTimeout     time.Duration `conf:"default:120s"`
+			ShutdownTimeout time.Duration `conf:"default:20s,mask"`
+			APIHost         string        `conf:"default:0.0.0.0:3000"`
+			DebugHost       string        `conf:"default:0.0.0.0:4000"`
+		}
 		Auth struct {
 			KeysFolder string `conf:"default:zarf/keys/"`
 			ActiveKID  string `conf:"963df661-d92e-4991-b519-77d838a21705"`
@@ -73,6 +89,20 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 		}
 		return fmt.Errorf("parsing config: %w", err)
 	}
+
+	// ------------------------------------------------------------------------------
+	// App Starting
+
+	log.Info(ctx, "starting service", "version", build)
+	defer log.Info(ctx, "shutdown complete")
+
+	out, err := conf.String(&cfg)
+	if err != nil {
+		return fmt.Errorf("generating config for output: %w", err)
+	}
+	log.Info(ctx, "startup", "config", out)
+
+	expvar.NewString("build").Set(build)
 
 	// ------------------------------------------------------------------------------
 	// Initialize authentication support
@@ -99,10 +129,10 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	// Start Debug Service
 
 	go func() {
-		log.Info(ctx, "startup", "status", "debug v1 router started", "host", ":8000")
+		log.Info(ctx, "startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost)
 
-		if err := http.ListenAndServe(":8000", debug.Mux()); err != nil {
-			log.Error(ctx, "shutdown", "status", "debug v1 router closed", "host", ":8000", "msg", err)
+		if err := http.ListenAndServe(cfg.Web.DebugHost, debug.Mux()); err != nil {
+			log.Error(ctx, "shutdown", "status", "debug v1 router closed", "host", cfg.Web.DebugHost, "msg", err)
 		}
 	}()
 
@@ -122,8 +152,12 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	apiMux := v1.APIMux(cfgMux, routeAdder)
 
 	srv := http.Server{
-		Addr:    ":9000",
-		Handler: apiMux,
+		Addr:         cfg.Web.APIHost,
+		Handler:      apiMux,
+		ReadTimeout:  cfg.Web.ReadTimeout,
+		WriteTimeout: cfg.Web.WriteTimeout,
+		IdleTimeout:  cfg.Web.IdleTimeout,
+		ErrorLog:     logger.NewStdLogger(log, logger.LevelError),
 	}
 
 	serverErrors := make(chan error, 1)
@@ -139,6 +173,9 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	case err := <-serverErrors:
 		log.Info(ctx, "Error while running server", "err", err)
 	case <-shutdown:
+
+		ctx, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
+		defer cancel()
 
 		if err := srv.Shutdown(ctx); err != nil {
 			srv.Close()

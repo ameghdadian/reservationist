@@ -8,10 +8,10 @@ tidy:
 	go mod tidy
 
 curl-test:
-	curl -iL http://localhost:9000/v1
+	curl -iL http://localhost:3000/v1
 
 curl-auth:
-	curl -il -H "Authorization: Bearer ${TOKEN}" http://localhost:9000/v1 
+	curl -il -H "Authorization: Bearer ${TOKEN}" http://localhost:3000/v1 
 
 generate-token:
 	go run app/tooling/sales-admin/main.go
