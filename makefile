@@ -14,4 +14,8 @@ curl-auth:
 	curl -il -H "Authorization: Bearer ${TOKEN}" http://localhost:3000/v1 
 
 generate-token:
-	go run app/tooling/sales-admin/main.go
+	go run app/tooling/sales-admin/main.go --command gentoken
+generate-private-key:
+	go run app/tooling/sales-admin/main.go --command genkey
+generate-migrate-seed:
+	go run app/tooling/sales-admin/main.go --command migrateseed
