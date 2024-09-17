@@ -34,7 +34,7 @@ func Main(build string, routeAdder v1.RouterAdder) error {
 		return web.GetTraceID(ctx)
 	}
 
-	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "SALES-API", traceIDFunc, events)
+	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RESERVATIONS-API", traceIDFunc, events)
 
 	// -----------------------------------------------------------------------
 
@@ -80,7 +80,7 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 		},
 	}
 
-	const prefix = "SALES"
+	const prefix = "RESERVATIONS"
 	help, err := conf.Parse(prefix, &cfg)
 	if err != nil {
 		if errors.Is(err, conf.ErrHelpWanted) {

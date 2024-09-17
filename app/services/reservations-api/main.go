@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/ameghdadian/service/app/services/sales-api/v1/cmd"
-	"github.com/ameghdadian/service/app/services/sales-api/v1/cmd/all"
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/cmd"
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/cmd/all"
 )
 
 /*

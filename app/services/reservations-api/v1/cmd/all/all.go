@@ -1,7 +1,7 @@
 package all
 
 import (
-	"github.com/ameghdadian/service/app/services/sales-api/v1/handlers/testgrp"
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/testgrp"
 	v1 "github.com/ameghdadian/service/business/web/v1"
 	"github.com/ameghdadian/service/foundation/web"
 )
