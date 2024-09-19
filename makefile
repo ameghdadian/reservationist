@@ -7,9 +7,6 @@ run:
 run-fmt:
 	go run app/services/reservations-api/main.go | go run app/tooling/logfmt/main.go
 
-tidy:
-	go mod tidy
-
 curl-test:
 	curl -iL http://localhost:3000/v1
 
@@ -76,9 +73,41 @@ dev-up:
 	kind create cluster \
 		--image $(KIND) \
 		--name $(KIND_CLUSTER) \
-		--config zarf/k8s/dev/kind-config.yaml
+		--config zarf/k8s/kind/dev-kind-config.yaml
 
 	kubectl wait --timeout=120s --namespace=local-path-storage --for=condition=Available deployment/local-path-provisioner
 
 dev-down:
 	kind delete cluster --name $(KIND_CLUSTER)
+
+# =============================================================================
+
+dev-load:
+	kind load docker-image $(SERVICE_IMAGE) --name $(KIND_CLUSTER)
+
+dev-apply:
+	helm upgrade --install reservationist zarf/k8s/deployments \
+		-f zarf/k8s/deployments/values.dev.yaml \
+		--set version=$(VERSION)
+# --kubeconfig zarf/k8s/.kubeconfig.yaml
+
+	kubectl wait --timeout=120s --namespace=$(NAMESPACE) --for=condition=Ready pods -lapp=$(APP)
+
+dev-restart:
+	kubectl rollout restart deployment $(APP) --namespace=$(NAMESPACE)
+
+dev-update: all dev-load dev-restart
+
+dev-update-apply: all dev-load dev-apply
+
+# =============================================================================
+
+dev-logs:
+	kubectl logs --namespace=$(NAMESPACE) -lapp=$(APP) --all-containers=true -f --tail 100 --max-log-requests=6 | go run app/tooling/logfmt/main.go -service=$(SERVICE_NAME)
+
+# =============================================================================
+# Modules Support
+
+tidy:
+	go mod tidy
+	go mod vendor
