@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "deployments.name" . }}-api
+  namespace: {{ include "deployments.name" . }}-system
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3000
+  - name: http-debug
+    port: 4000
+  selector:
+    app: {{ include "deployments.name" . }}

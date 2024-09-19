@@ -1,0 +1,9 @@
+version: ""
+
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 500m
+  requests:
+    cpu: 500m

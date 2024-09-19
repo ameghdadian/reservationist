@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deployments.name" . }}
+  namespace: {{ include "deployments.name" . }}-system
+# Deployment Spec
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: {{ include "deployments.name" . }}
+  
+  # Replicaset Spec
+  template:
+    metadata:
+      labels:
+        app: {{ include "deployments.name" . }}
+    
+    # POD Spec
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      terminateGracePeriodSeconds: 60
+
+      containers:
+        - name: {{ include "deployments.name" . }}-api
+          image: {{ printf "ameghdadian/service/%s-api:%s" (include "deployments.name" .) .Values.version }}
+
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+            limits:
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+
+          ports:
+          - name: http
+            containerPort: 3000
+          - name: http-debug
+            containerPort: 4000
+          
+          readinessProbe:
+            httpGet:
+              path: /v1/readiness
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          
+          livenessProbe:
+            httpGet:
+              path: /v1/liveness
+              port: 3000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          
+          env:
+          - name: GOMAXPROCS
+            valueFrom:
+              resourceFieldRef:
+                resource: limits.cpu
+          - name: KUBERNETES_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: KUBERNETES_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: KUBERNETES_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBERNETES_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+
+          
+
