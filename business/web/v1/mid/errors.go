@@ -7,6 +7,7 @@ import (
 	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/business/web/v1/response"
 	"github.com/ameghdadian/service/foundation/logger"
+	"github.com/ameghdadian/service/foundation/validate"
 	"github.com/ameghdadian/service/foundation/web"
 )
 
@@ -25,8 +26,15 @@ func Errors(log *logger.Logger) web.Middleware {
 				case response.IsError(err):
 					reqErr := response.GetError(err)
 
-					// if validate.IsFieldErrors(reqErr.Err){
-					// }
+					if validate.IsFieldErrors(reqErr.Err) {
+						fieldErrors := validate.GetFieldErrors(reqErr.Err)
+						er = response.ErrorDocument{
+							Error:  "data validation error",
+							Fields: fieldErrors.Fields(),
+						}
+						status = reqErr.Status
+						break
+					}
 
 					er = response.ErrorDocument{
 						Error: reqErr.Error(),
