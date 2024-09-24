@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: database
+  namespace: {{ include "database.name" . }}-system
+spec:
+  selector:
+    matchLabels:
+      app: database
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      terminationGracefulPeriodSeconds: 60
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: database-data
+        - name: config
+          configMap:
+            name: pghbaconf
+            items:
+              - key: "pg_hba.conf"
+                path: "pg_hba.conf"
+      containers:
+      - name: postgres
+        image: {{ .Values.image }}
+        volumeMounts:
+          - name: data
+            mountPath: /var/lib/postgresql/data
+          - name: config
+            readOnly: false
+            mountPath: "etc/pg_hba.conf"
+            subPath: "pg_hba.conf"
+        resources:
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+        args: ['-c', 'hba_file=/etc/pg_hba.conf']
+        env:
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        ports:
+        - name: postgres
+          containerPort: 5432
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -h
+            - localhost
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -h
+            - localhost
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          timeoutSeconds: 1

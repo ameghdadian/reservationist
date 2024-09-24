@@ -9,3 +9,6 @@ nodes:
   # Reservations-Api debug
   - containerPort: 4000
     hostPort: 4000
+  # Database
+  - containerPort: 5432
+    hostPort: 5432

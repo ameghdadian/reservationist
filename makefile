@@ -77,6 +77,8 @@ dev-up:
 
 	kubectl wait --timeout=120s --namespace=local-path-storage --for=condition=Available deployment/local-path-provisioner
 
+	kind load docker-image $(POSTGRES) --name $(KIND_CLUSTER)
+
 dev-down:
 	kind delete cluster --name $(KIND_CLUSTER)
 
@@ -86,11 +88,14 @@ dev-load:
 	kind load docker-image $(SERVICE_IMAGE) --name $(KIND_CLUSTER)
 
 dev-apply:
-	helm upgrade --install reservationist zarf/k8s/deployments \
-		-f zarf/k8s/deployments/values.dev.yaml \
+	helm upgrade --install db zarf/k8s/app/database \
+		-f zarf/k8s/app/database/values.dev.yaml
+	kubectl rollout status --namespace=$(NAMESPACE) --watch --timeout=120s sts/database	
+
+	helm upgrade --install reservationist zarf/k8s/app/deployments \
+		-f zarf/k8s/app/deployments/values.dev.yaml \
 		--set version=$(VERSION)
 # --kubeconfig zarf/k8s/.kubeconfig.yaml
-
 	kubectl wait --timeout=120s --namespace=$(NAMESPACE) --for=condition=Ready pods -lapp=$(APP)
 
 dev-restart:
@@ -104,6 +109,12 @@ dev-update-apply: all dev-load dev-apply
 
 dev-logs:
 	kubectl logs --namespace=$(NAMESPACE) -lapp=$(APP) --all-containers=true -f --tail 100 --max-log-requests=6 | go run app/tooling/logfmt/main.go -service=$(SERVICE_NAME)
+
+dev-logs-db:
+	kubecl logs --namespace=$(NAMESPACE) -lapp=database --all-containers=true -f --tail=100
+
+pgcli:
+	pgcli postgres://postgres:postgres@localhost
 
 # =============================================================================
 # Modules Support

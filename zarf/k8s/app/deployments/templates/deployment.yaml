@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ include "deployments.name" . }}
   namespace: {{ include "deployments.name" . }}-system
-# Deployment Spec
+# Replicaset Spec
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
@@ -13,13 +13,12 @@ spec:
     matchLabels:
       app: {{ include "deployments.name" . }}
   
-  # Replicaset Spec
+  # Pod Spec
   template:
     metadata:
       labels:
         app: {{ include "deployments.name" . }}
     
-    # POD Spec
     spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
