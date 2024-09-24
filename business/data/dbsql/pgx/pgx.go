@@ -12,6 +12,7 @@ import (
 
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
 

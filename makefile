@@ -111,7 +111,15 @@ dev-logs:
 	kubectl logs --namespace=$(NAMESPACE) -lapp=$(APP) --all-containers=true -f --tail 100 --max-log-requests=6 | go run app/tooling/logfmt/main.go -service=$(SERVICE_NAME)
 
 dev-logs-db:
-	kubecl logs --namespace=$(NAMESPACE) -lapp=database --all-containers=true -f --tail=100
+	kubectl logs --namespace=$(NAMESPACE) -lapp=database --all-containers=true -f --tail=100
+
+dev-status:
+	kubectl get nodes -o wide
+	kubectl get svc -o wide
+	kubectl get pods -o wide --watch --all-namespaces
+
+dev-logs-init:
+	kubectl logs --namespace=$(NAMESPACE) -lapp=$(APP) -f --tail=100 -c init-migrate
 
 pgcli:
 	pgcli postgres://postgres:postgres@localhost

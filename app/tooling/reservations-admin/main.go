@@ -36,7 +36,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	// _, err := genkey()
+
 	var err error
 	switch command {
 	case "migrateseed":
@@ -46,7 +46,7 @@ func main() {
 	case "genkey":
 		_, err = genkey()
 	default:
-		log.Fatalln(errors.New("unrecognized command"))
+		log.Fatalln("unrecognized command")
 	}
 
 	if err != nil {

@@ -3,37 +3,49 @@ package dbmigrate
 import (
 	"context"
 	"database/sql"
+	"embed"
 	_ "embed"
 	"errors"
 	"fmt"
 
 	database "github.com/ameghdadian/service/business/data/dbsql/pgx"
-	"github.com/ardanlabs/darwin/v3"
-	"github.com/ardanlabs/darwin/v3/dialects/postgres"
-	"github.com/ardanlabs/darwin/v3/drivers/generic"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jmoiron/sqlx"
 )
 
-var (
-	//go:embed sql/migrate.sql
-	migrateDoc string
+//go:embed sql/migrations/*.sql
+var migrateDoc embed.FS
 
-	//go:embed sql/seed.sql
-	seedDoc string
-)
+//go:embed sql/seed.sql
+var seedDoc string
 
 func Migrate(ctx context.Context, db *sqlx.DB) error {
 	if err := database.StatusCheck(ctx, db); err != nil {
 		return fmt.Errorf("status check database: %w", err)
 	}
 
-	driver, err := generic.New(db.DB, postgres.Dialect{})
+	d, err := iofs.New(migrateDoc, "sql/migrations")
 	if err != nil {
-		return fmt.Errorf("construct darwin driver: %w", err)
+		return fmt.Errorf("loading migration files into migrate iofs: %w", err)
 	}
 
-	d := darwin.New(driver, darwin.ParseMigrations(migrateDoc))
-	d.Migrate()
+	instance, err := pgx.WithInstance(db.DB, &pgx.Config{})
+	if err != nil {
+		return fmt.Errorf("creating pgx driver instance: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", d, "postgres", instance)
+	if err != nil {
+		return fmt.Errorf("constructing migrate driver: %w", err)
+	}
+
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("migrating the database: %w", err)
+	}
 
 	return nil
 }

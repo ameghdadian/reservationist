@@ -5,7 +5,7 @@ INSERT INTO
         email,
         roles,
         password_hash,
-        department,
+        phone_no,
         enabled,
         date_created,
         date_updated
@@ -16,10 +16,10 @@ VALUES (
         'admin@example.com',
         '{ADMIN,USER}',
         '$2a$10$1ggfMVZV6Js0ybvJufLRUOWHS5f6KneuP0XwwHpJ8L8ipdry9f2/a',
-        NULL,
+        "",
         true,
-        '2019-03-24 00:00:00',
-        '2019-03-24 00:00:00'
+        '2024-09-24 00:00:00',
+        '2019-09-24 00:00:00'
     ),
     (
         '45b5fbd3-755f-4379-8f07-a58d4a30fa2f',
@@ -27,8 +27,8 @@ VALUES (
         'user@example.com',
         '{USER}',
         '$2a$10$9/XASPKBbJKVfCAZKDH.UuhsuALDr5vVm6VrYA9VFR8rccK86C1hW',
-        NULL,
+        "",
         true,
-        '2019-03-24 00:00:00',
-        '2019-03-24 00:00:00'
+        '2019-09-24 00:00:00',
+        '2019-09-24 00:00:00'
     ) ON CONFLICT DO NOTHING;
