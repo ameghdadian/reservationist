@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	db "github.com/ameghdadian/service/business/data/dbsql/pgx"
 	"github.com/ameghdadian/service/business/web/debug"
 	v1 "github.com/ameghdadian/service/business/web/v1"
 	"github.com/ameghdadian/service/business/web/v1/auth"
@@ -68,6 +69,15 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 			APIHost         string        `conf:"default:0.0.0.0:3000"`
 			DebugHost       string        `conf:"default:0.0.0.0:4000"`
 		}
+		DB struct {
+			User         string `conf:"default:postgres"`
+			Password     string `conf:"default:postgres,mask"`
+			Host         string `conf:"default:database-service.sales-system.svc.cluster.local"`
+			Name         string `conf:"default:postgres"`
+			MaxIdleConns int    `conf:"default:2"`
+			MaxOpenConns int    `conf:"default:0"`
+			DisableTLS   bool   `conf:"default:true"`
+		}
 		Auth struct {
 			KeysFolder string `conf:"default:zarf/keys/"`
 			ActiveKID  string `conf:"963df661-d92e-4991-b519-77d838a21705"`
@@ -103,6 +113,27 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	log.Info(ctx, "startup", "config", out)
 
 	expvar.NewString("build").Set(build)
+
+	// ------------------------------------------------------------------------------
+	// Initialize authentication support
+
+	log.Info(ctx, "startup", "status", "initializing database support", "host", cfg.DB.Host)
+
+	db, err := db.Open(db.Config{
+		User:         cfg.DB.User,
+		Password:     cfg.DB.Password,
+		Host:         cfg.DB.Host,
+		Name:         cfg.DB.Name,
+		MaxIdleConns: cfg.DB.MaxIdleConns,
+		MaxOpenConns: cfg.DB.MaxOpenConns,
+		DisableTLS:   cfg.DB.DisableTLS,
+	})
+	if err != nil {
+		return fmt.Errorf("connecting to db: %w", err)
+	}
+	defer func() {
+		log.Info(ctx, "shutdown", "status", "stopping database support", "host", cfg.DB.Host)
+	}()
 
 	// ------------------------------------------------------------------------------
 	// Initialize authentication support
@@ -147,6 +178,7 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 		Shutdown: shutdown,
 		Log:      log,
 		Auth:     auth,
+		DB:       db,
 	}
 
 	apiMux := v1.APIMux(cfgMux, routeAdder)

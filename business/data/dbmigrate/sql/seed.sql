@@ -16,7 +16,7 @@ VALUES (
         'admin@example.com',
         '{ADMIN,USER}',
         '$2a$10$1ggfMVZV6Js0ybvJufLRUOWHS5f6KneuP0XwwHpJ8L8ipdry9f2/a',
-        "",
+        '+982111090909',
         true,
         '2024-09-24 00:00:00',
         '2019-09-24 00:00:00'
@@ -27,7 +27,7 @@ VALUES (
         'user@example.com',
         '{USER}',
         '$2a$10$9/XASPKBbJKVfCAZKDH.UuhsuALDr5vVm6VrYA9VFR8rccK86C1hW',
-        "",
+        '+989121234587',
         true,
         '2019-09-24 00:00:00',
         '2019-09-24 00:00:00'

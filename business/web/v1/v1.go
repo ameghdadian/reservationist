@@ -7,6 +7,7 @@ import (
 	"github.com/ameghdadian/service/business/web/v1/mid"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
+	"github.com/jmoiron/sqlx"
 )
 
 type APIMuxConfig struct {
@@ -14,6 +15,7 @@ type APIMuxConfig struct {
 	Shutdown chan os.Signal
 	Log      *logger.Logger
 	Auth     *auth.Auth
+	DB       *sqlx.DB
 }
 
 type RouterAdder interface {

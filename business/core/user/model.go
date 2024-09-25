@@ -14,6 +14,7 @@ type User struct {
 	Roles        []Role
 	PasswordHash []byte
 	Enabled      bool
+	PhoneNo      PhoneNumber
 	DateCreated  time.Time
 	DateUpdated  time.Time
 }
@@ -22,6 +23,7 @@ type NewUser struct {
 	Name            string
 	Email           mail.Address
 	Roles           []Role
+	PhoneNo         PhoneNumber
 	Password        string
 	PasswordConfirm string
 }
