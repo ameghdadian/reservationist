@@ -34,7 +34,7 @@ func (s *Store) Create(ctx context.Context, usr user.User) error {
 
 	if err := db.NamedExecContext(ctx, s.log, s.db, q, toDBUser(usr)); err != nil {
 		if errors.Is(err, db.ErrDBDuplicateEntry) {
-			return fmt.Errorf("namedexeccontext: %w", user.ErrUniqueEmail)
+			return fmt.Errorf("namedexeccontext: %w", user.ErrUniqueEmailOrPhoneNo)
 		}
 		return fmt.Errorf("namedexeccontext: %w", err)
 	}
