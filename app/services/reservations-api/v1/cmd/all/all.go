@@ -25,6 +25,7 @@ func (add) Add(app *web.App, cfg v1.APIMuxConfig) {
 	checkgrp.Routes(app, checkgrp.Config{
 		Build: cfg.Build,
 		Log:   cfg.Log,
+		DB:    cfg.DB,
 	})
 
 	usergrp.Routes(app, usergrp.Config{

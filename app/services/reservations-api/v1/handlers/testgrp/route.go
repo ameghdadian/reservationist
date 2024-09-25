@@ -23,4 +23,5 @@ func Routes(app *web.App, cfg Config) {
 
 	hdl := New(cfg.Build, cfg.Log)
 	app.Handle(http.MethodGet, version, "", hdl.TestGrpHandler, authen, ruleAdmin)
+	app.Handle(http.MethodGet, version, "/hack", hdl.TestGrpHandler)
 }

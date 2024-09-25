@@ -7,11 +7,24 @@ run:
 run-fmt:
 	go run app/services/reservations-api/main.go | go run app/tooling/logfmt/main.go
 
-curl-test:
-	curl -iL http://localhost:3000/v1
+
+curl:
+	curl -iL http://localhost:3000/v1/hack
 
 curl-auth:
 	curl -il -H "Authorization: Bearer ${TOKEN}" http://localhost:3000/v1 
+
+load: 
+	hey -m GET -c 100 -n 100000 "http://localhost:3000/v1/hack"
+
+admin:
+	go run app/tooling/reservations-admin/main.go
+
+ready:
+	curl -il http://localhost:3000/v1/readiness
+
+live:
+	curl -il http://localhost:3000/v1/liveness
 
 generate-token:
 	go run app/tooling/reservations-admin/main.go --command gentoken
