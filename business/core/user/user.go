@@ -55,6 +55,7 @@ func (c *Core) Create(ctx context.Context, nu NewUser) (User, error) {
 		PasswordHash: hash,
 		Roles:        nu.Roles,
 		Enabled:      true,
+		PhoneNo:      nu.PhoneNo,
 		DateCreated:  now,
 		DateUpdated:  now,
 	}

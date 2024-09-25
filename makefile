@@ -20,6 +20,8 @@ generate-private-key:
 generate-migrate-seed:
 	go run app/tooling/reservations-admin/main.go --command migrateseed
 
+curl-create:
+	curl -il -X POST -H 'Content-Type: application/json' -d '{"name": "John Doe", "email": "johndoe@gmail.com", "roles": ["ADMIN"], "phoneNumber": "+989129128276", "password": "123", "passwordConfirm": "123"}' http://localhost:3000/v1/users
 
 # =============================================================================
 # Define dependencies
@@ -130,3 +132,20 @@ pgcli:
 tidy:
 	go mod tidy
 	go mod vendor
+
+test-race:
+	CGO_ENABLED=1 go test -race -count=1 ./...
+
+test-only:
+	CGO_ENABLED=1 go test -count=1 ./...
+
+lint:
+	CGO_ENABLED=0 go vet ./...
+	staticcheck -checks=all ./...
+
+vuln-check:
+	govulncheck ./...
+
+test: test-only lint vuln-check
+
+test-race: test-race lint vuln-check

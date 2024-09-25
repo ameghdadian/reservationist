@@ -20,7 +20,7 @@ type Container struct {
 func StartContainer(image string, port string, dockerArgs []string, appArgs []string) (*Container, error) {
 	args := []string{"run", "-P", "-d"}
 	args = append(args, dockerArgs...)
-	args = append(args, port)
+	args = append(args, image)
 	args = append(args, appArgs...)
 
 	cmd := exec.Command("docker", args...)

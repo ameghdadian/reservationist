@@ -29,7 +29,7 @@ func (s *Store) Create(ctx context.Context, usr user.User) error {
 	INSERT INTO users
 		(user_id, name, email, password_hash, roles, phone_no, enabled, date_created, date_updated)	
 	VALUES
-		(:user_id, :name, :email, :password_hash, :roles, :phone_no, :enabled, :date_created, :date_upadted)
+		(:user_id, :name, :email, :password_hash, :roles, :phone_no, :enabled, :date_created, :date_updated)
 	`
 
 	if err := db.NamedExecContext(ctx, s.log, s.db, q, toDBUser(usr)); err != nil {

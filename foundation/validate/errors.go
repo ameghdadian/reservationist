@@ -32,7 +32,7 @@ func (fe FieldErrors) Error() string {
 func (fe FieldErrors) Fields() map[string]string {
 	m := make(map[string]string)
 	for _, fld := range fe {
-		m[fld.Err] = fld.Err
+		m[fld.Field] = fld.Err
 	}
 
 	return m
