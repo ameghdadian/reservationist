@@ -13,6 +13,7 @@ type QueryFilter struct {
 	ID               *uuid.UUID    `validate:"omitempty"`
 	Name             *string       `validate:"omitempty,min=3"`
 	Email            *mail.Address `validate:"omitempty"`
+	PhoneNumber      *PhoneNumber  `validate:"omitempty"`
 	StartCreatedDate *time.Time    `validate:"omitempty"`
 	EndCreatedDate   *time.Time    `validate:"omitempty"`
 }
@@ -36,6 +37,10 @@ func (qf *QueryFilter) WithName(name string) {
 
 func (qf *QueryFilter) WithEmail(email mail.Address) {
 	qf.Email = &email
+}
+
+func (qf *QueryFilter) WithPhoneNumber(phoneNumber PhoneNumber) {
+	qf.PhoneNumber = &phoneNumber
 }
 
 func (qf *QueryFilter) WithStartDateCreated(startDate time.Time) {

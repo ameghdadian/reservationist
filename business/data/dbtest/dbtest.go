@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/mail"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/ameghdadian/service/foundation/docker"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/jmoiron/sqlx"
 
 	db "github.com/ameghdadian/service/business/data/dbsql/pgx"
@@ -165,6 +167,36 @@ func NewTest(t *testing.T, c *docker.Container) *Test {
 	}
 
 	return &test
+}
+
+// TokenV1 generates an authenticated token for a user.
+func (test *Test) TokenV1(email string, pass string) string {
+	test.t.Logf("Generating %q token for test ...", email)
+
+	addr, _ := mail.ParseAddress(email)
+
+	store := userdb.NewStore(test.Log, test.DB)
+	dbUsr, err := store.QueryByEmail(context.Background(), *addr)
+	if err != nil {
+		return ""
+	}
+
+	claims := auth.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   dbUsr.ID.String(),
+			Issuer:    "service project",
+			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		},
+		Roles: dbUsr.Roles,
+	}
+
+	token, err := test.V1.Auth.GenerateToken(kid, claims)
+	if err != nil {
+		test.t.Fatal(err)
+	}
+
+	return token
 }
 
 // =============================================================================
