@@ -2,6 +2,24 @@ package response
 
 import "errors"
 
+type PageDocument[T any] struct {
+	Items       []T `json:"items"`
+	Total       int `json:"total"`
+	Page        int `json:"page"`
+	RowsPerPage int `json:"rowsPerPage"`
+}
+
+func NewPageDocument[T any](items []T, total int, page int, rowsPerPage int) PageDocument[T] {
+	return PageDocument[T]{
+		Items:       items,
+		Total:       total,
+		Page:        page,
+		RowsPerPage: rowsPerPage,
+	}
+}
+
+// ============================================================================
+
 // ErrorDocument is the form used for API responses from failures in the API.
 type ErrorDocument struct {
 	Error  string            `json:"error"`

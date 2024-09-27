@@ -10,7 +10,7 @@ import (
 
 var c *docker.Container
 
-func Test_Main(m *testing.M) {
+func TestMain(m *testing.M) {
 	var err error
 	c, err = dbtest.StartDB()
 	if err != nil {

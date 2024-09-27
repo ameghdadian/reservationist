@@ -83,6 +83,28 @@ func (s *Store) Query(ctx context.Context, filter user.QueryFilter, orderBy orde
 	return usrs, nil
 }
 
+func (s *Store) Count(ctx context.Context, filter user.QueryFilter) (int, error) {
+	var data map[string]any
+
+	const q = `
+	SELECT	
+		count(1)
+	FROM
+		users
+	`
+	buf := bytes.NewBufferString(q)
+	s.applyFilter(filter, data, buf)
+
+	var count struct {
+		Count int `db:"count"`
+	}
+	if err := db.NamedQueryStruct(ctx, s.log, s.db, q, data, &count); err != nil {
+		return 0, fmt.Errorf("namedquerystruct: %w", err)
+	}
+
+	return count.Count, nil
+}
+
 func (s *Store) QueryByEmail(ctx context.Context, email mail.Address) (user.User, error) {
 	data := struct {
 		Email string `db:"email"`
