@@ -10,6 +10,7 @@ import (
 	"github.com/ameghdadian/service/business/core/user"
 	db "github.com/ameghdadian/service/business/data/dbsql/pgx"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/google/uuid"
 
 	"github.com/ameghdadian/service/foundation/logger"
@@ -26,6 +27,20 @@ func NewStore(log *logger.Logger, db *sqlx.DB) *Store {
 		log: log,
 		db:  db,
 	}
+}
+
+func (s *Store) ExecuteUnderTransaction(tx transaction.Transaction) (user.Storer, error) {
+	ec, err := db.GetExtContext(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	s = &Store{
+		db:  ec,
+		log: s.log,
+	}
+
+	return s, nil
 }
 
 func (s *Store) Create(ctx context.Context, usr user.User) error {

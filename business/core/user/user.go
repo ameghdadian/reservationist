@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -20,6 +21,7 @@ var (
 )
 
 type Storer interface {
+	ExecuteUnderTransaction(tx transaction.Transaction) (Storer, error)
 	Create(ctx context.Context, usr User) error
 	// Update(ctx context.Context, usr User) error
 	// Delete(ctx context.Context, usr User) error
@@ -40,6 +42,20 @@ func NewCore(log *logger.Logger, storer Storer) *Core {
 		storer: storer,
 		log:    log,
 	}
+}
+
+func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error) {
+	trS, err := c.storer.ExecuteUnderTransaction(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	c = &Core{
+		storer: trS,
+		log:    c.log,
+	}
+
+	return c, nil
 }
 
 func (c *Core) Create(ctx context.Context, nu NewUser) (User, error) {
