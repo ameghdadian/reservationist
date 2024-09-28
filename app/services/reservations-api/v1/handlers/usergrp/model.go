@@ -99,3 +99,55 @@ func toCoreNewUser(app AppNewUser) (user.NewUser, error) {
 
 	return usr, nil
 }
+
+// =========================================================
+type AppUpdateUser struct {
+	Name            *string  `json:"name"`
+	Email           *string  `json:"email" validate:"omitempty,email"`
+	Roles           []string `json:"roles"`
+	Password        *string  `json:"password"`
+	PasswordConfirm *string  `json:"passwordConfirm" validate:"omitempty,eqfield=Password"`
+	Enabled         *bool    `json:"enabled"`
+}
+
+func (app AppUpdateUser) Validate() error {
+	if err := validate.Check(app); err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+
+	return nil
+}
+
+func toCoreUpdateUser(app AppUpdateUser) (user.UpdateUser, error) {
+	var roles []user.Role
+	if app.Roles != nil {
+		roles = make([]user.Role, len(app.Roles))
+		for i, roleStr := range app.Roles {
+			role, err := user.ParseRole(roleStr)
+			if err != nil {
+				return user.UpdateUser{}, fmt.Errorf("parsing role: %w", err)
+			}
+			roles[i] = role
+		}
+	}
+
+	var addr *mail.Address
+	if app.Email != nil {
+		var err error
+		addr, err = mail.ParseAddress(*app.Email)
+		if err != nil {
+			return user.UpdateUser{}, fmt.Errorf("parsing email address: %w", err)
+		}
+	}
+
+	nu := user.UpdateUser{
+		Name:            app.Name,
+		Email:           addr,
+		Roles:           roles,
+		Password:        app.Password,
+		PasswordConfirm: app.Password,
+		Enabled:         app.Enabled,
+	}
+
+	return nu, nil
+}

@@ -61,6 +61,50 @@ func (s *Store) Create(ctx context.Context, usr user.User) error {
 	return nil
 }
 
+func (s *Store) Update(ctx context.Context, usr user.User) error {
+	const q = `
+	UPDATE
+		users
+	SET
+		"name" = :name,
+		"email" = :email,
+		"roles" = :roles,
+		"password_hash" = :password_hash,
+		"enabled" = :enabled,
+		"date_updated" = :date_updated
+	WHERE
+		user_id = :user_id
+	`
+	if err := db.NamedExecContext(ctx, s.log, s.db, q, toDBUser(usr)); err != nil {
+		if errors.Is(err, db.ErrDBDuplicateEntry) {
+			return user.ErrUniqueEmailOrPhoneNo
+		}
+		return fmt.Errorf("namedexedcontext: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Store) Delete(ctx context.Context, usr user.User) error {
+	data := struct {
+		UserID string `db:"user_id"`
+	}{
+		UserID: usr.ID.String(),
+	}
+	const q = `
+	DELETE FROM
+		users
+	WHERE
+		user_id = :user_id
+	`
+
+	if err := db.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
+		return fmt.Errorf("namedexeccontext: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Store) Query(ctx context.Context, filter user.QueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]user.User, error) {
 	data := map[string]any{
 		"offset":        (pageNumber - 1) * rowsPerPage,
@@ -150,6 +194,39 @@ func (s *Store) QueryByEmail(ctx context.Context, email mail.Address) (user.User
 	}
 
 	return usr, err
+}
+
+func (s *Store) QueryByIDs(ctx context.Context, userID []uuid.UUID) ([]user.User, error) {
+	data := struct {
+		IDs []uuid.UUID `db:"user_ids"`
+	}{
+		IDs: userID,
+	}
+
+	const q = `
+	SELECT	
+		user_id, name, email, password_hash, roles, phone_no, enabled, date_created, date_updated	
+	FROM
+		users
+	WHERE
+		user_id = ANY (:user_ids)
+	`
+
+	var dbUsrs []dbUser
+	if err := db.NamedQuerySlice(ctx, s.log, s.db, q, data, &dbUsrs); err != nil {
+		if errors.Is(err, db.ErrDBNotFound) {
+			return nil, user.ErrNotFound
+		}
+
+		return nil, fmt.Errorf("namedqueryslice: %w", err)
+	}
+
+	usrs, err := toCoreUserSlice(dbUsrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return usrs, nil
 }
 
 func (s *Store) QueryByID(ctx context.Context, userID uuid.UUID) (user.User, error) {

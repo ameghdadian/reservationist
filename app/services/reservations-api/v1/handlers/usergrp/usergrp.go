@@ -8,6 +8,7 @@ import (
 
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/page"
+	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/business/web/v1/response"
 	"github.com/ameghdadian/service/foundation/web"
@@ -25,7 +26,30 @@ func New(user *user.Core, auth *auth.Auth) *Handlers {
 	}
 }
 
+func (h *Handlers) executeUnderTransaction(ctx context.Context) (*Handlers, error) {
+	if tx, ok := transaction.Get(ctx); ok {
+		user, err := h.user.ExecuteUnderTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+
+		h = &Handlers{
+			user: user,
+			auth: h.auth,
+		}
+
+		return h, nil
+	}
+
+	return h, nil
+}
+
 func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	h, err := h.executeUnderTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
 	var app AppNewUser
 	if err := web.Decode(r, &app); err != nil {
 		return response.NewError(err, http.StatusBadRequest)
@@ -45,6 +69,67 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 	}
 
 	return web.Respond(ctx, w, toAppUser(usr), http.StatusCreated)
+}
+
+func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	h, err := h.executeUnderTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
+	var app AppUpdateUser
+	if err := web.Decode(r, &app); err != nil {
+		return response.NewError(err, http.StatusBadRequest)
+	}
+
+	userID := auth.GetUserID(ctx)
+
+	usr, err := h.user.QueryByID(ctx, userID)
+	if err != nil {
+		switch err {
+		case user.ErrNotFound:
+			return response.NewError(err, http.StatusNotFound)
+		default:
+			return fmt.Errorf("querybyid: userID[%s]: %w", userID, err)
+		}
+	}
+
+	uu, err := toCoreUpdateUser(app)
+	if err != nil {
+		return response.NewError(err, http.StatusBadRequest)
+	}
+
+	usr, err = h.user.Update(ctx, usr, uu)
+	if err != nil {
+		return fmt.Errorf("update: userID[%s] uu[%+v]: %w", userID, uu, err)
+	}
+
+	return web.Respond(ctx, w, toAppUser(usr), http.StatusOK)
+}
+
+func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	h, err := h.executeUnderTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
+	userID := auth.GetUserID(ctx)
+
+	usr, err := h.user.QueryByID(ctx, userID)
+	if err != nil {
+		switch err {
+		case user.ErrNotFound:
+			return response.NewError(err, http.StatusNotFound)
+		default:
+			return fmt.Errorf("querybyid: userID[%s]: %w", userID, err)
+		}
+	}
+
+	if err := h.user.Delete(ctx, usr); err != nil {
+		return fmt.Errorf("delete: userID[%v]: %w", userID, err)
+	}
+
+	return web.Respond(ctx, w, nil, http.StatusNoContent)
 }
 
 func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Request) error {

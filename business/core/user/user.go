@@ -23,12 +23,12 @@ var (
 type Storer interface {
 	ExecuteUnderTransaction(tx transaction.Transaction) (Storer, error)
 	Create(ctx context.Context, usr User) error
-	// Update(ctx context.Context, usr User) error
-	// Delete(ctx context.Context, usr User) error
+	Update(ctx context.Context, usr User) error
+	Delete(ctx context.Context, usr User) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]User, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, userID uuid.UUID) (User, error)
-	// QueryByIDs(ctx context.Context, userID []uuid.UUID) ([]User, error)
+	QueryByIDs(ctx context.Context, userID []uuid.UUID) ([]User, error)
 	QueryByEmail(ctx context.Context, email mail.Address) (User, error)
 }
 
@@ -85,6 +85,48 @@ func (c *Core) Create(ctx context.Context, nu NewUser) (User, error) {
 	return usr, nil
 }
 
+func (c *Core) Update(ctx context.Context, usr User, uu UpdateUser) (User, error) {
+	if uu.Name != nil {
+		usr.Name = *uu.Name
+	}
+
+	if uu.Email != nil {
+		usr.Email = *uu.Email
+	}
+
+	if uu.Roles != nil {
+		usr.Roles = uu.Roles
+	}
+
+	if uu.Password != nil {
+		pw, err := bcrypt.GenerateFromPassword([]byte(*uu.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return User{}, fmt.Errorf("generatefrompassword: %w", err)
+		}
+
+		usr.PasswordHash = pw
+	}
+
+	if uu.Enabled != nil {
+		usr.Enabled = *uu.Enabled
+	}
+	usr.DateUpdated = time.Now()
+
+	if err := c.storer.Update(ctx, usr); err != nil {
+		return User{}, fmt.Errorf("update: %w", err)
+	}
+
+	return usr, nil
+}
+
+func (c *Core) Delete(ctx context.Context, usr User) error {
+	if err := c.storer.Delete(ctx, usr); err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]User, error) {
 	users, err := c.storer.Query(ctx, filter, orderBy, pageNumber, rowsPerPage)
 	if err != nil {
@@ -105,6 +147,15 @@ func (c *Core) QueryByID(ctx context.Context, userID uuid.UUID) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (c *Core) QueryByIDs(ctx context.Context, userID []uuid.UUID) ([]User, error) {
+	usrs, err := c.storer.QueryByIDs(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("querybyids: ids[%q]: %w", userID, err)
+	}
+
+	return usrs, nil
 }
 
 func (c *Core) QueryByEmail(ctx context.Context, email mail.Address) (User, error) {
