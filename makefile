@@ -103,12 +103,12 @@ dev-load:
 	kind load docker-image $(SERVICE_IMAGE) --name $(KIND_CLUSTER)
 
 dev-apply:
-	helm upgrade --install db zarf/k8s/app/database \
-		-f zarf/k8s/app/database/values.dev.yaml
+	helm upgrade --install db zarf/k8s/deployments/database \
+		-f zarf/k8s/deployments/database/values.dev.yaml
 	kubectl rollout status --namespace=$(NAMESPACE) --watch --timeout=120s sts/database	
 
-	helm upgrade --install reservationist zarf/k8s/app/deployments \
-		-f zarf/k8s/app/deployments/values.dev.yaml \
+	helm upgrade --install reservationist zarf/k8s/deployments/app \
+		-f zarf/k8s/deployments/app/values.dev.yaml \
 		--set version=$(VERSION)
 # --kubeconfig zarf/k8s/.kubeconfig.yaml
 	kubectl wait --timeout=120s --namespace=$(NAMESPACE) --for=condition=Ready pods -lapp=$(APP)
