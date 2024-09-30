@@ -5,13 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/mail"
+	"time"
 
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/business/web/v1/response"
+	"github.com/ameghdadian/service/foundation/validate"
 	"github.com/ameghdadian/service/foundation/web"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type Handlers struct {
@@ -175,4 +179,50 @@ func (h *Handlers) QueryByID(ctx context.Context, w http.ResponseWriter, r *http
 	}
 
 	return web.Respond(ctx, w, toAppUser(usr), http.StatusOK)
+}
+
+func (h *Handlers) Token(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	kid := web.Param(r, "kid")
+	if kid == "" {
+		return validate.NewFieldsError("kid", errors.New("missing kid"))
+	}
+
+	email, pass, ok := r.BasicAuth()
+	if !ok {
+		return auth.NewAuthError("must provide email and password in Basic auth")
+	}
+
+	addr, err := mail.ParseAddress(email)
+	if err != nil {
+		return auth.NewAuthError("invalid email format")
+	}
+
+	usr, err := h.user.Authenticate(ctx, *addr, pass)
+	if err != nil {
+		switch {
+		case errors.Is(err, user.ErrNotFound):
+			return response.NewError(err, http.StatusNotFound)
+		case errors.Is(err, user.ErrAuthenticationFailure):
+			return auth.NewAuthError(err.Error())
+		default:
+			return fmt.Errorf("authenticate: %w", err)
+		}
+	}
+
+	claims := auth.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   usr.ID.String(),
+			Issuer:    "service project",
+			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		},
+		Roles: usr.Roles,
+	}
+
+	token, err := h.auth.GenerateToken(kid, claims)
+	if err != nil {
+		return fmt.Errorf("generatetoken: %w", err)
+	}
+
+	return web.Respond(ctx, w, toToken(token), http.StatusOK)
 }

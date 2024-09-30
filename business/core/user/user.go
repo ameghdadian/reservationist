@@ -166,3 +166,16 @@ func (c *Core) QueryByEmail(ctx context.Context, email mail.Address) (User, erro
 
 	return user, nil
 }
+
+func (c *Core) Authenticate(ctx context.Context, email mail.Address, pass string) (User, error) {
+	usr, err := c.storer.QueryByEmail(ctx, email)
+	if err != nil {
+		return User{}, fmt.Errorf("query: email[%s]: %w", email, err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword(usr.PasswordHash, []byte(pass)); err != nil {
+		return User{}, fmt.Errorf("comparehashandpassword: %w", ErrAuthenticationFailure)
+	}
+
+	return usr, nil
+}

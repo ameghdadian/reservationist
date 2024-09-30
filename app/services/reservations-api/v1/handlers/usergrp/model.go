@@ -151,3 +151,15 @@ func toCoreUpdateUser(app AppUpdateUser) (user.UpdateUser, error) {
 
 	return nu, nil
 }
+
+// =========================================================
+
+type token struct {
+	Token string `json:"token"`
+}
+
+func toToken(v string) token {
+	return token{
+		Token: v,
+	}
+}
