@@ -1,6 +1,7 @@
 package all
 
 import (
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/businessgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/checkgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/testgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/usergrp"
@@ -33,5 +34,12 @@ func (add) Add(app *web.App, cfg v1.APIMuxConfig) {
 		Log:   cfg.Log,
 		DB:    cfg.DB,
 		Auth:  cfg.Auth,
+	})
+
+	businessgrp.Routes(app, businessgrp.Config{
+		Build: cfg.Build,
+		Log:   cfg.Log,
+		Auth:  cfg.Auth,
+		DB:    cfg.DB,
 	})
 }

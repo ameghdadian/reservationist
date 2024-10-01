@@ -123,7 +123,7 @@ func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Re
 	if err != nil {
 		switch err {
 		case user.ErrNotFound:
-			return response.NewError(err, http.StatusNotFound)
+			return response.NewError(err, http.StatusNoContent)
 		default:
 			return fmt.Errorf("querybyid: userID[%s]: %w", userID, err)
 		}
