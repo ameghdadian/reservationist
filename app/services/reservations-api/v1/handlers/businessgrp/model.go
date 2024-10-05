@@ -10,12 +10,12 @@ import (
 )
 
 type AppBusiness struct {
-	ID          string    `json:"id"`
-	OwnerID     string    `json:"ownerID"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	DateCreated time.Time `json:"dateCreated"`
-	DateUpdated time.Time `json:"dateUpdated"`
+	ID          string `json:"id"`
+	OwnerID     string `json:"ownerID"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	DateCreated string `json:"dateCreated"`
+	DateUpdated string `json:"dateUpdated"`
 }
 
 func toAppBusiness(b business.Business) AppBusiness {
@@ -24,8 +24,8 @@ func toAppBusiness(b business.Business) AppBusiness {
 		OwnerID:     b.OwnerID.String(),
 		Name:        b.Name,
 		Description: b.Desc,
-		DateCreated: b.DateCreated,
-		DateUpdated: b.DateUpdated,
+		DateCreated: b.DateCreated.Format(time.RFC3339),
+		DateUpdated: b.DateUpdated.Format(time.RFC3339),
 	}
 }
 

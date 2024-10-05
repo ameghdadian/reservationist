@@ -75,7 +75,7 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return fmt.Errorf("create: app[%+v]: %w", app, err)
 	}
 
-	return web.Respond(ctx, w, toAppBusiness(b), http.StatusOK)
+	return web.Respond(ctx, w, toAppBusiness(b), http.StatusCreated)
 }
 
 func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
