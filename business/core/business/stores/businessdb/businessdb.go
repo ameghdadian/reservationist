@@ -62,7 +62,8 @@ func (s *Store) Update(ctx context.Context, b business.Business) error {
 		businesses
 	SET
 		"name" = :name,
-		"description" = :description
+		"description" = :description,
+		"date_updated" = :date_updated
 	WHERE
 		business_id = :business_id
 	`

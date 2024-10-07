@@ -17,6 +17,8 @@ func NewBeginner(sqlxDB *sqlx.DB) transaction.Beginner {
 	}
 }
 
+// Begin overrides sqlx.DB's embedded sql.DB Begin method by returning
+// sqlx.Tx (which implements sqlx.ExtContext) instead of sql.Tx.
 func (db *dbBegineer) Begin() (transaction.Transaction, error) {
 	return db.sqlxDB.Beginx()
 }

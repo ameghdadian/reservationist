@@ -1,4 +1,4 @@
-package businessgrp
+package appointmentgrp
 
 import (
 	"context"
@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ameghdadian/service/business/core/business"
-	"github.com/ameghdadian/service/business/core/user"
+	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/business/web/v1/response"
@@ -20,32 +19,24 @@ var (
 )
 
 type Handlers struct {
-	bsnCore *business.Core
-	usrCore *user.Core
+	aptCore *appointment.Core
 }
 
-func New(bsnCore *business.Core, usrCore *user.Core) *Handlers {
+func New(aptCore *appointment.Core) *Handlers {
 	return &Handlers{
-		bsnCore: bsnCore,
-		usrCore: usrCore,
+		aptCore: aptCore,
 	}
 }
 
 func (h *Handlers) executeUnderTransaction(ctx context.Context) (*Handlers, error) {
 	if tx, ok := transaction.Get(ctx); ok {
-		usrCore, err := h.usrCore.ExecuteUnderTransaction(tx)
-		if err != nil {
-			return nil, err
-		}
-
-		bsnCore, err := h.bsnCore.ExecuteUnderTransaction(tx)
+		aptCore, err := h.aptCore.ExecuteUnderTransaction(tx)
 		if err != nil {
 			return nil, err
 		}
 
 		h = &Handlers{
-			bsnCore: bsnCore,
-			usrCore: usrCore,
+			aptCore: aptCore,
 		}
 
 		return h, nil
@@ -60,22 +51,22 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return err
 	}
 
-	var app AppNewBusiness
+	var app AppNewAppointment
 	if err := web.Decode(r, &app); err != nil {
 		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	nb, err := toCoreNewBusiness(app)
+	na, err := toCoreNewAppointment(app)
 	if err != nil {
 		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	b, err := h.bsnCore.Create(ctx, nb)
+	apt, err := h.aptCore.Create(ctx, na)
 	if err != nil {
 		return fmt.Errorf("create: app[%+v]: %w", app, err)
 	}
 
-	return web.Respond(ctx, w, toAppBusiness(b), http.StatusCreated)
+	return web.Respond(ctx, w, toAppAppointment(apt), http.StatusCreated)
 }
 
 func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -84,32 +75,37 @@ func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return err
 	}
 
-	var app AppUpdateBusiness
+	var app AppUpdateAppointment
 	if err := web.Decode(r, &app); err != nil {
 		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	bsnId, err := uuid.Parse(web.Param(r, "business_id"))
+	aptID, err := uuid.Parse(web.Param(r, "appointment_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	b, err := h.bsnCore.QueryByID(ctx, bsnId)
+	apt, err := h.aptCore.QueryByID(ctx, aptID)
 	if err != nil {
 		switch {
-		case errors.Is(err, business.ErrNotFound):
+		case errors.Is(err, appointment.ErrNotFound):
 			return response.NewError(err, http.StatusNotFound)
 		default:
-			return fmt.Errorf("querybyid: businessID[%s]: %w", bsnId, err)
+			return fmt.Errorf("querybyid: appointmentid[%s]: %w", aptID, err)
 		}
 	}
 
-	b, err = h.bsnCore.Update(ctx, b, toCoreUpdateBusiness(app))
+	uapt, err := toCoreUpdateAppointment(app)
 	if err != nil {
-		return fmt.Errorf("update: businessID[%s]: app[%+v]: %w", bsnId, app, err)
+		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	return web.Respond(ctx, w, toAppBusiness(b), http.StatusOK)
+	apt, err = h.aptCore.Update(ctx, apt, uapt)
+	if err != nil {
+		return fmt.Errorf("update: appointmentID[%s] uapt[%+v]: %w", aptID, uapt, err)
+	}
+
+	return web.Respond(ctx, w, toAppAppointment(apt), http.StatusOK)
 }
 
 func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -118,23 +114,23 @@ func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return err
 	}
 
-	bsnID, err := uuid.Parse(web.Param(r, "business_id"))
+	aptID, err := uuid.Parse(web.Param(r, "appointment_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	b, err := h.bsnCore.QueryByID(ctx, bsnID)
+	apt, err := h.aptCore.QueryByID(ctx, aptID)
 	if err != nil {
 		switch {
-		case errors.Is(err, business.ErrNotFound):
-			return response.NewError(err, http.StatusNoContent)
+		case errors.Is(err, appointment.ErrNotFound):
+			return response.NewError(err, http.StatusNotFound)
 		default:
-			return fmt.Errorf("querybyid: businessID[%s]: %w", bsnID, err)
+			return fmt.Errorf("querybyid: appointmentid[%s]: %w", aptID, err)
 		}
 	}
 
-	if err := h.bsnCore.Delete(ctx, b); err != nil {
-		return fmt.Errorf("delete: businessID[%s]: %w", bsnID, err)
+	if err := h.aptCore.Delete(ctx, apt); err != nil {
+		return fmt.Errorf("delete: appointmentID[%s]: %w", aptID, err)
 	}
 
 	return web.Respond(ctx, w, nil, http.StatusNoContent)
@@ -151,40 +147,40 @@ func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return err
 	}
 
+	// TODO: What's the returned status when a Field validation error occurs?
 	orderBy, err := parseOrder(r)
 	if err != nil {
 		return err
 	}
 
-	bsns, err := h.bsnCore.Query(ctx, filter, orderBy, page.Number, page.RowsPerPage)
+	apts, err := h.aptCore.Query(ctx, filter, orderBy, page.Number, page.RowsPerPage)
 	if err != nil {
 		return fmt.Errorf("query: %w", err)
 	}
 
-	total, err := h.bsnCore.Count(ctx, filter)
+	total, err := h.aptCore.Count(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("count: %w", err)
 	}
 
-	return web.Respond(ctx, w, response.NewPageDocument(toAppBusinesses(bsns), total, page.Number, page.RowsPerPage), http.StatusOK)
-
+	return web.Respond(ctx, w, response.NewPageDocument(toAppAppointments(apts), total, page.Number, page.RowsPerPage), http.StatusOK)
 }
 
 func (h *Handlers) QueryByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	bsnID, err := uuid.Parse(web.Param(r, "business_id"))
+	aptID, err := uuid.Parse(web.Param(r, "business_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	b, err := h.bsnCore.QueryByID(ctx, bsnID)
+	apt, err := h.aptCore.QueryByID(ctx, aptID)
 	if err != nil {
 		switch {
-		case errors.Is(err, business.ErrNotFound):
+		case errors.Is(err, appointment.ErrNotFound):
 			return response.NewError(err, http.StatusNotFound)
 		default:
-			return fmt.Errorf("querybyid: businessID[%s]: %w", bsnID, err)
+			return fmt.Errorf("querybyid: appointmentid[%s]: %w", aptID, err)
 		}
 	}
 
-	return web.Respond(ctx, w, toAppBusiness(b), http.StatusOK)
+	return web.Respond(ctx, w, toAppAppointment(apt), http.StatusOK)
 }

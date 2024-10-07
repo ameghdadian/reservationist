@@ -69,7 +69,7 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 		if errors.Is(err, user.ErrUniqueEmailOrPhoneNo) {
 			return response.NewError(err, http.StatusConflict)
 		}
-		return fmt.Errorf("create: usr[%+v]: %w", usr, err)
+		return fmt.Errorf("create: usr[%+v]: %w", app, err)
 	}
 
 	return web.Respond(ctx, w, toAppUser(usr), http.StatusCreated)

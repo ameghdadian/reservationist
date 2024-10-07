@@ -76,6 +76,14 @@ type AppUpdateBusiness struct {
 	Desc *string `json:"description" validate:"omitempty,max=140"`
 }
 
+func (app AppUpdateBusiness) Validate() error {
+	if err := validate.Check(app); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func toCoreUpdateBusiness(app AppUpdateBusiness) business.UpdateBusiness {
 	core := business.UpdateBusiness{
 		Name: app.Name,
