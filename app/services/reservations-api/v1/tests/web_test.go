@@ -10,10 +10,13 @@ import (
 	"os"
 	"runtime/debug"
 	"testing"
+	"time"
 
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/cmd/all"
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/appointmentgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/businessgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/usergrp"
+	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/dbtest"
@@ -24,8 +27,9 @@ import (
 )
 
 type seedData struct {
-	users      []user.User
-	businesses []business.Business
+	users        []user.User
+	businesses   []business.Business
+	appointments []appointment.Appointment
 }
 
 // WebTests holds methods for each subtest. This type allows passing
@@ -85,9 +89,24 @@ func Test_Web(t *testing.T) {
 		bsns = append(bsns, bsns1...)
 		bsns = append(bsns, bsns2...)
 
+		apts1, err := appointment.TestGenerateSeedAppointments(1, api.Appointment, usrs[0].ID, bsns1[0].ID)
+		if err != nil {
+			return seedData{}, fmt.Errorf("seeding appointments: %w", err)
+		}
+
+		apts2, err := appointment.TestGenerateSeedAppointments(1, api.Appointment, usrs[1].ID, bsns2[0].ID)
+		if err != nil {
+			return seedData{}, fmt.Errorf("seeding appointments: %w", err)
+		}
+
+		var apts []appointment.Appointment
+		apts = append(apts, apts1...)
+		apts = append(apts, apts2...)
+
 		sd := seedData{
-			users:      usrs,
-			businesses: bsns,
+			users:        usrs,
+			businesses:   bsns,
+			appointments: apts,
 		}
 
 		return sd, nil
@@ -103,9 +122,10 @@ func Test_Web(t *testing.T) {
 	// ================================================================
 
 	t.Run("query200", tests.query200(sd))
-	t.Run("getByID200", tests.queryByID200(sd))
+	t.Run("queryByID200", tests.queryByID200(sd))
 	t.Run("createUser200", tests.createUser200(sd))
 	t.Run("createBusiness200", tests.createBusiness200(sd))
+	t.Run("createAppointment200", tests.createAppointment200(sd))
 }
 
 func (wt *WebTests) query200(sd seedData) func(t *testing.T) {
@@ -136,6 +156,17 @@ func (wt *WebTests) query200(sd seedData) func(t *testing.T) {
 					RowsPerPage: 2,
 					Total:       len(sd.businesses),
 					Items:       toAppBusinesses(sd.businesses),
+				},
+			},
+			{
+				name: "appointment",
+				url:  "/v1/appointments?page=1&rows=2&orderBy=user_id,DESC",
+				resp: &response.PageDocument[appointmentgrp.AppAppointment]{},
+				expResp: &response.PageDocument[appointmentgrp.AppAppointment]{
+					Page:        1,
+					RowsPerPage: 2,
+					Total:       len(sd.appointments),
+					Items:       toAppAppointments(sd.appointments),
 				},
 			},
 		}
@@ -185,9 +216,15 @@ func (wt *WebTests) queryByID200(sd seedData) func(t *testing.T) {
 			},
 			{
 				name:    "business",
-				url:     fmt.Sprintf("/v1/businesses/%s", sd.businesses[0].ID),
+				url:     fmt.Sprintf("/v1/businesses/%s", sd.businesses[1].ID),
 				resp:    &businessgrp.AppBusiness{},
-				expResp: toAppBusinessPtr(sd.businesses[0]),
+				expResp: toAppBusinessPtr(sd.businesses[1]),
+			},
+			{
+				name:    "appointment",
+				url:     fmt.Sprintf("/v1/appointments/%s", sd.appointments[1].ID),
+				resp:    &appointmentgrp.AppAppointment{},
+				expResp: toAppAppointmentPtr(sd.appointments[1]),
 			},
 		}
 
@@ -204,7 +241,7 @@ func (wt *WebTests) queryByID200(sd seedData) func(t *testing.T) {
 			}
 
 			if err := json.Unmarshal(w.Body.Bytes(), &tt.resp); err != nil {
-				t.Errorf("Should be able to unmarshal the respones: %s", err)
+				t.Errorf("%s: Should be able to unmarshal the respones: %s", tt.name, err)
 			}
 
 			diff := cmp.Diff(tt.resp, tt.expResp)
@@ -349,6 +386,82 @@ func (wt *WebTests) createBusiness200(sd seedData) func(t *testing.T) {
 			}
 
 			expResp := tt.expResp.(*businessgrp.AppBusiness)
+			expResp.ID = gotResp.ID
+			expResp.DateCreated = gotResp.DateCreated
+			expResp.DateUpdated = gotResp.DateUpdated
+
+			diff := cmp.Diff(gotResp, expResp)
+			if diff != "" {
+				t.Error("Should get the expected response")
+				t.Log("GOT")
+				t.Logf("%#v", gotResp)
+				t.Log("EXP")
+				t.Logf("%#v", expResp)
+				continue
+			}
+		}
+	}
+}
+
+func (wt *WebTests) createAppointment200(sd seedData) func(t *testing.T) {
+	inTwoHrs := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
+
+	return func(t *testing.T) {
+		table := []struct {
+			name    string
+			url     string
+			input   any
+			resp    any
+			expResp any
+		}{
+			{
+				name: "appointment",
+				url:  "/v1/appointments",
+				input: &appointmentgrp.AppNewAppointment{
+					BusinessID:  sd.businesses[0].ID.String(),
+					UserID:      sd.users[0].ID.String(),
+					Status:      appointment.StatusScheduled.Status(),
+					ScheduledOn: inTwoHrs,
+				},
+				resp: &appointmentgrp.AppAppointment{},
+				expResp: &appointmentgrp.AppAppointment{
+					BusinessID:  sd.businesses[0].ID.String(),
+					UserID:      sd.users[0].ID.String(),
+					Status:      appointment.StatusScheduled.Status(),
+					ScheduledOn: inTwoHrs,
+				},
+			},
+		}
+
+		t.Log(table[0].input)
+
+		for _, tt := range table {
+			d, err := json.Marshal(tt.input)
+			if err != nil {
+				t.Fatalf("error occurred")
+			}
+
+			r := httptest.NewRequest(http.MethodPost, tt.url, bytes.NewBuffer(d))
+			w := httptest.NewRecorder()
+
+			r.Header.Set("Authorization", "Bearer "+wt.adminToken)
+			wt.app.ServeHTTP(w, r)
+
+			if w.Code != http.StatusCreated {
+				t.Errorf("%s: Should receive a status code of 201 for the response: %d", tt.name, w.Code)
+				continue
+			}
+
+			if err := json.Unmarshal(w.Body.Bytes(), &tt.resp); err != nil {
+				t.Errorf("Should be able to unmarshal the respones: %s", err)
+			}
+
+			gotResp, exists := tt.resp.(*appointmentgrp.AppAppointment)
+			if !exists {
+				t.Fatalf("error occurred")
+			}
+
+			expResp := tt.expResp.(*appointmentgrp.AppAppointment)
 			expResp.ID = gotResp.ID
 			expResp.DateCreated = gotResp.DateCreated
 			expResp.DateUpdated = gotResp.DateUpdated

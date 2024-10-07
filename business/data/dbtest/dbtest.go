@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ameghdadian/service/business/core/appointment"
+	"github.com/ameghdadian/service/business/core/appointment/stores/appointmentdb"
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/core/business/stores/businessdb"
 	"github.com/ameghdadian/service/business/core/user"
@@ -228,17 +230,20 @@ func FloatPointer(f float64) *float64 {
 
 // CoreAPIs represents all the core api's needed for testing.
 type CoreAPIs struct {
-	User     *user.Core
-	Business *business.Core
+	User        *user.Core
+	Business    *business.Core
+	Appointment *appointment.Core
 }
 
 func newCoreAPIs(log *logger.Logger, db *sqlx.DB) CoreAPIs {
 	usrCore := user.NewCore(log, userdb.NewStore(log, db))
 	bsnCore := business.NewCore(log, usrCore, businessdb.NewStore(log, db))
+	aptCore := appointment.NewCore(log, usrCore, bsnCore, appointmentdb.NewStore(log, db))
 
 	return CoreAPIs{
-		User:     usrCore,
-		Business: bsnCore,
+		User:        usrCore,
+		Business:    bsnCore,
+		Appointment: aptCore,
 	}
 }
 

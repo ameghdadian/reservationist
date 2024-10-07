@@ -8,13 +8,13 @@ import (
 )
 
 var toDBStatuses = map[appointment.Status]int16{
-	appointment.Cancelled: 0,
-	appointment.Scheduled: 1,
+	appointment.StatusCancelled: 0,
+	appointment.StatusScheduled: 1,
 }
 
 var toCoreStatuses = map[int16]appointment.Status{
-	0: appointment.Cancelled,
-	1: appointment.Scheduled,
+	0: appointment.StatusCancelled,
+	1: appointment.StatusScheduled,
 }
 
 // toDBStatus converts status string value to db smallint

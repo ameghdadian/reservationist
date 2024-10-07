@@ -3,13 +3,13 @@ package appointment
 import "fmt"
 
 var (
-	Scheduled = Status{"Scheduled"}
-	Cancelled = Status{"Cancelled"}
+	StatusScheduled = Status{"Scheduled"}
+	StatusCancelled = Status{"Cancelled"}
 )
 
 var statuses = map[string]Status{
-	Cancelled.status: Cancelled,
-	Scheduled.status: Scheduled,
+	StatusCancelled.status: StatusCancelled,
+	StatusScheduled.status: StatusScheduled,
 }
 
 type Status struct {

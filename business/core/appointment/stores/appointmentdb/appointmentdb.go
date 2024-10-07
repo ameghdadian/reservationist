@@ -130,7 +130,8 @@ func (s *Store) Query(ctx context.Context, filter appointment.QueryFilter, order
 }
 
 func (s *Store) Count(ctx context.Context, filter appointment.QueryFilter) (int, error) {
-	var data map[string]any
+	data := map[string]any{}
+
 	const q = `
 	SELECT
 		COUNT(1)
@@ -160,7 +161,7 @@ func (s *Store) QueryByID(ctx context.Context, aptID uuid.UUID) (appointment.App
 	}
 	const q = `
 	SELECT	
-		(appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated)
+		appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated
 	FROM
 		appointments
 	WHERE
@@ -187,7 +188,7 @@ func (s *Store) QueryByUserID(ctx context.Context, usrID uuid.UUID) ([]appointme
 
 	const q = `
 	SELECT
-		(appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated)
+		appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated
 	FROM
 		appointments
 	WHERE
@@ -211,7 +212,7 @@ func (s *Store) QueryByBusinessID(ctx context.Context, bsnID uuid.UUID) ([]appoi
 
 	const q = `
 	SELECT
-		(appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated)
+		appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated
 	FROM
 		appointments
 	WHERE

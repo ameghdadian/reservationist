@@ -123,7 +123,7 @@ func (c *Core) Update(ctx context.Context, apt Appointment, uapt UpdateAppointme
 		return Appointment{}, ErrPastTime
 	}
 
-	if apt.Status == Cancelled {
+	if apt.Status == StatusCancelled {
 		return Appointment{}, ErrAlreadyCancelled
 	}
 

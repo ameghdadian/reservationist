@@ -85,7 +85,7 @@ func crud(t *testing.T) {
 	}
 
 	if n != 1 {
-		t.Error("Should have the correct number of business")
+		t.Error("Should have the correct number of businesses")
 		t.Errorf("GOT: %d\n", n)
 		t.Errorf("EXP: %d\n", 1)
 	}
@@ -118,7 +118,7 @@ func crud(t *testing.T) {
 	saved.DateUpdated = time.Time{}
 
 	if diff := cmp.Diff(bsns[0], saved); diff != "" {
-		t.Errorf("Should get back the same product, dif:\n%s", diff)
+		t.Errorf("Should get back the same product, diff:\n%s", diff)
 	}
 
 	// -------------------------------------------------------------------

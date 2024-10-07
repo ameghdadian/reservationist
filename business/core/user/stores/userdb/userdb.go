@@ -143,7 +143,7 @@ func (s *Store) Query(ctx context.Context, filter user.QueryFilter, orderBy orde
 }
 
 func (s *Store) Count(ctx context.Context, filter user.QueryFilter) (int, error) {
-	var data map[string]any
+	data := map[string]any{}
 
 	const q = `
 	SELECT	
@@ -157,7 +157,7 @@ func (s *Store) Count(ctx context.Context, filter user.QueryFilter) (int, error)
 	var count struct {
 		Count int `db:"count"`
 	}
-	if err := db.NamedQueryStruct(ctx, s.log, s.db, q, data, &count); err != nil {
+	if err := db.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &count); err != nil {
 		return 0, fmt.Errorf("namedquerystruct: %w", err)
 	}
 

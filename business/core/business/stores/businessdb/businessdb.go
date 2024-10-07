@@ -130,7 +130,7 @@ func (s *Store) Query(ctx context.Context, filter business.QueryFilter, orderBy 
 }
 
 func (s *Store) Count(ctx context.Context, filter business.QueryFilter) (int, error) {
-	var data map[string]any
+	data := map[string]any{}
 
 	const q = `
 	SELECT 
@@ -145,7 +145,7 @@ func (s *Store) Count(ctx context.Context, filter business.QueryFilter) (int, er
 		Count int `db:"count"`
 	}
 
-	if err := db.NamedQueryStruct(ctx, s.log, s.db, q, data, &count); err != nil {
+	if err := db.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &count); err != nil {
 		return 0, fmt.Errorf("namedquerystruct: %w", err)
 	}
 
