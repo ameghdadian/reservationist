@@ -167,7 +167,7 @@ func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func (h *Handlers) QueryByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	aptID, err := uuid.Parse(web.Param(r, "business_id"))
+	aptID, err := uuid.Parse(web.Param(r, "appointment_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}

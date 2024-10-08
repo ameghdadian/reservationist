@@ -3,10 +3,15 @@ package mid
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/ameghdadian/service/business/core/appointment"
+	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/business/web/v1/response"
+	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/google/uuid"
 )
@@ -59,6 +64,92 @@ func Authorize(a *auth.Auth, rule string) web.Middleware {
 
 			if err := a.Authorize(ctx, claims, userID, rule); err != nil {
 				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, rule, err)
+			}
+
+			return handler(ctx, w, r)
+		}
+
+		return h
+	}
+
+	return m
+}
+
+func AuthorizeBusiness(log *logger.Logger, ath *auth.Auth, bsnCore *business.Core) web.Middleware {
+	m := func(handler web.Handler) web.Handler {
+
+		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+			var userID uuid.UUID
+			id := web.Param(r, "business_id")
+
+			if id != "" {
+				bsnID, err := uuid.Parse(id)
+				if err != nil {
+					return response.NewError(ErrInvalidID, http.StatusBadRequest)
+				}
+
+				bsn, err := bsnCore.QueryByID(ctx, bsnID)
+				if err != nil {
+					if errors.Is(err, business.ErrNotFound) {
+						return response.NewError(err, http.StatusNotFound)
+					}
+
+					return fmt.Errorf("querybyid: bsnID[%s]: %w", bsnID, err)
+				}
+
+				userID = bsn.OwnerID
+				setBusiness(ctx, bsn)
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			claims := auth.GetClaims(ctx)
+			if err := ath.Authorize(ctx, claims, userID, auth.RuleAdminOrSubject); err != nil {
+				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
+			}
+
+			return handler(ctx, w, r)
+		}
+
+		return h
+	}
+
+	return m
+}
+
+func AuthorizeAppointment(log *logger.Logger, ath *auth.Auth, aptCore *appointment.Core) web.Middleware {
+	m := func(handler web.Handler) web.Handler {
+
+		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+			var userID uuid.UUID
+			id := web.Param(r, "appointment_id")
+
+			if id != "" {
+				aptID, err := uuid.Parse(id)
+				if err != nil {
+					return response.NewError(ErrInvalidID, http.StatusBadRequest)
+				}
+
+				apt, err := aptCore.QueryByID(ctx, aptID)
+				if err != nil {
+					if errors.Is(err, business.ErrNotFound) {
+						return response.NewError(err, http.StatusNotFound)
+					}
+
+					return fmt.Errorf("querybyid: aptID[%s]: %w", aptID, err)
+				}
+
+				userID = apt.UserID
+				setAppointment(ctx, apt)
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			claims := auth.GetClaims(ctx)
+			if err := ath.Authorize(ctx, claims, userID, auth.RuleAdminOrSubject); err != nil {
+				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
 			}
 
 			return handler(ctx, w, r)

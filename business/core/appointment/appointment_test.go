@@ -146,8 +146,6 @@ func crud(t *testing.T) {
 		t.Errorf("Should get back the same appointment, diff:\n%s", diff)
 	}
 
-	sd.apts[0].ScheduledOn = time.Now().Add(2 * time.Hour)
-
 	// -----------------------------------------------------------------------------------------------------
 	// Create
 
@@ -214,6 +212,8 @@ func crud(t *testing.T) {
 	// -------------------------------------------------------------------
 	// Update
 
+	// Restore back scheduled on time after resetting it in QueryByID test suite
+	sd.apts[0].ScheduledOn = time.Now().Add(2 * time.Hour)
 	ua := appointment.UpdateAppointment{Status: &appointment.StatusCancelled}
 	apt1, err := api.Appointment.Update(ctx, sd.apts[0], ua)
 	if err != nil {

@@ -46,7 +46,7 @@ type AppNewAppointment struct {
 	BusinessID  string `json:"business_id" validate:"required,uuid"`
 	UserID      string `json:"user_id" validate:"required,uuid"`
 	Status      string `json:"status" validate:"required"`
-	ScheduledOn string `json:"scheduled_on" validate:"required,datetime"`
+	ScheduledOn string `json:"scheduled_on" validate:"required"`
 }
 
 func (app AppNewAppointment) Validate() error {
@@ -75,7 +75,7 @@ func toCoreNewAppointment(app AppNewAppointment) (appointment.NewAppointment, er
 
 	sch, err := time.Parse(time.RFC3339, app.ScheduledOn)
 	if err != nil {
-		return appointment.NewAppointment{}, fmt.Errorf("parsing scheduled on time: %w", err)
+		return appointment.NewAppointment{}, fmt.Errorf("parsing scheduled on: %w", err)
 	}
 
 	na := appointment.NewAppointment{

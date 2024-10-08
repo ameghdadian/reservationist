@@ -3,8 +3,10 @@ package tests
 import (
 	"time"
 
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/appointmentgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/businessgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/usergrp"
+	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/core/user"
 )
@@ -67,4 +69,32 @@ func toAppBusinesses(bsns []business.Business) []businessgrp.AppBusiness {
 func toAppBusinessPtr(b business.Business) *businessgrp.AppBusiness {
 	appBsn := toAppBusiness(b)
 	return &appBsn
+}
+
+// ----------------------------------------------------------
+
+func toAppAppointment(apt appointment.Appointment) appointmentgrp.AppAppointment {
+	return appointmentgrp.AppAppointment{
+		ID:          apt.ID.String(),
+		BusinessID:  apt.BusinessID.String(),
+		UserID:      apt.UserID.String(),
+		Status:      apt.Status.Status(),
+		ScheduledOn: apt.ScheduledOn.Format(time.RFC3339),
+		DateCreated: apt.DateCreated.Format(time.RFC3339),
+		DateUpdated: apt.DateUpdated.Format(time.RFC3339),
+	}
+}
+
+func toAppAppointments(apts []appointment.Appointment) []appointmentgrp.AppAppointment {
+	apps := make([]appointmentgrp.AppAppointment, len(apts))
+	for i, apt := range apts {
+		apps[i] = toAppAppointment(apt)
+	}
+
+	return apps
+}
+
+func toAppAppointmentPtr(a appointment.Appointment) *appointmentgrp.AppAppointment {
+	appApt := toAppAppointment(a)
+	return &appApt
 }

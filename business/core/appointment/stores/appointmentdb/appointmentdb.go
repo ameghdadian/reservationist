@@ -103,7 +103,7 @@ func (s *Store) Query(ctx context.Context, filter appointment.QueryFilter, order
 
 	const q = `
 	SELECT	
-		(appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated)
+		appointment_id, business_id, user_id, status, scheduled_on, date_created, date_updated
 	FROM
 		appointments
 	`
@@ -117,7 +117,7 @@ func (s *Store) Query(ctx context.Context, filter appointment.QueryFilter, order
 	}
 
 	buf.WriteString(orderByClause)
-	buf.WriteString(" OFFSET :offset ROWS FETCH NEXT :rows_per_page ONLY")
+	buf.WriteString(" OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY ")
 
 	var dbApts []dbAppointment
 	if err := db.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &dbApts); err != nil {
