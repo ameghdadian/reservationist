@@ -1,0 +1,1 @@
+DROP TABLE general_agenda IF EXISTS;
