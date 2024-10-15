@@ -98,11 +98,8 @@ func (s *Store) DeleteGeneralAgenda(ctx context.Context, agd agenda.GeneralAgend
 	return nil
 }
 
-func (s *Store) QueryGeneralAgenda(ctx context.Context, filter agenda.GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]agenda.GeneralAgenda, error) {
-	data := map[string]any{
-		"offset":        (pageNumber - 1) * rowsPerPage,
-		"rows_per_page": rowsPerPage,
-	}
+func (s *Store) QueryGeneralAgenda(ctx context.Context, filter agenda.GAQueryFilter) (agenda.GeneralAgenda, error) {
+	data := map[string]any{}
 
 	const q = `
 	SELECT 	
@@ -114,25 +111,20 @@ func (s *Store) QueryGeneralAgenda(ctx context.Context, filter agenda.GAQueryFil
 	buf := bytes.NewBufferString(q)
 	s.applyFilterGeneralAgenda(filter, data, buf)
 
-	orderByClause, err := orderByClause(orderBy)
+	var dbgAgd dbGeneralAgenda
+	if err := db.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &dbgAgd); err != nil {
+		if errors.Is(err, db.ErrDBNotFound) {
+			return agenda.GeneralAgenda{}, fmt.Errorf("namedquerystruct: %w", agenda.ErrNotFound)
+		}
+		return agenda.GeneralAgenda{}, fmt.Errorf("namedquerystruct: %w", err)
+	}
+
+	agd, err := toCoreGeneralAgenda(dbgAgd)
 	if err != nil {
-		return nil, err
+		return agenda.GeneralAgenda{}, err
 	}
 
-	buf.WriteString(orderByClause)
-	buf.WriteString(" OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY")
-
-	var dbgAgd []dbGeneralAgenda
-	if err := db.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &dbgAgd); err != nil {
-		return nil, fmt.Errorf("namedqueryslice: %w", err)
-	}
-
-	agds, err := toCoreGeneralAgendaSlice(dbgAgd)
-	if err != nil {
-		return nil, err
-	}
-
-	return agds, nil
+	return agd, nil
 }
 
 func (s *Store) CountGeneralAgenda(ctx context.Context, filter agenda.GAQueryFilter) (int, error) {
@@ -158,67 +150,6 @@ func (s *Store) CountGeneralAgenda(ctx context.Context, filter agenda.GAQueryFil
 	return count.Count, nil
 }
 
-func (s *Store) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (agenda.GeneralAgenda, error) {
-	data := struct {
-		ID string `db:"id"`
-	}{
-		ID: agdID.String(),
-	}
-
-	const q = `
-	SELECT 	
-		id, business_id, opens_at, closed_at, interval, working_days, date_created, date_updated
-	FROM 
-		general_agenda
-	WHERE
-		id = :id
-	`
-
-	var agd dbGeneralAgenda
-	if err := db.NamedQueryStruct(ctx, s.log, s.db, q, data, &agd); err != nil {
-		if errors.Is(err, db.ErrDBNotFound) {
-			return agenda.GeneralAgenda{}, fmt.Errorf("namedquerystruct: %w", agenda.ErrNotFound)
-		}
-		return agenda.GeneralAgenda{}, fmt.Errorf("namedquerystruct: %w", err)
-	}
-
-	cAgd, err := toCoreGeneralAgenda(agd)
-	if err != nil {
-		return agenda.GeneralAgenda{}, err
-	}
-
-	return cAgd, nil
-}
-
-func (s *Store) QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (agenda.GeneralAgenda, error) {
-	data := struct {
-		BusinessID string `db:"business_id"`
-	}{
-		BusinessID: bsnID.String(),
-	}
-
-	const q = `
-	SELECT 	
-		id, business_id, opens_at, closed_at, interval, working_days, date_created, date_updated
-	FROM 
-		general_agenda
-	WHERE
-		business_id = :business_id
-	`
-
-	var agd dbGeneralAgenda
-	if err := db.NamedQueryStruct(ctx, s.log, s.db, q, data, &agd); err != nil {
-		return agenda.GeneralAgenda{}, fmt.Errorf("namedquerystruct: %w", err)
-	}
-
-	cAgd, err := toCoreGeneralAgenda(agd)
-	if err != nil {
-		return agenda.GeneralAgenda{}, err
-	}
-
-	return cAgd, nil
-}
-
 func (s *Store) CreateDailyAgenda(ctx context.Context, agd agenda.DailyAgenda) error {
 	const q = `
 	INSERT INTO daily_agenda
@@ -242,7 +173,7 @@ func (s *Store) UpdateDailyAgenda(ctx context.Context, agd agenda.DailyAgenda) e
 		"opens_at" = :opens_at,
 		"closed_at" = :closed_at,
 		"interval" = :interval,
-		"applicable_date" = :date
+		"applicable_date" = :applicable_date,
 		"date_updated" = :date_updated
 	WHERE
 		"id" = :id
@@ -354,6 +285,9 @@ func (s *Store) QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (agen
 
 	var agd dbDailyAgenda
 	if err := db.NamedQueryStruct(ctx, s.log, s.db, q, data, &agd); err != nil {
+		if errors.Is(err, db.ErrDBNotFound) {
+			return agenda.DailyAgenda{}, fmt.Errorf("namedquerystruct: %w", agenda.ErrNotFound)
+		}
 		return agenda.DailyAgenda{}, fmt.Errorf("namedquerystruct: %w", err)
 	}
 

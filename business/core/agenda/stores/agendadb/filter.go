@@ -12,7 +12,7 @@ func (s *Store) applyFilterGeneralAgenda(filter agenda.GAQueryFilter, data map[s
 	var wc []string
 
 	if filter.ID != nil {
-		data["id"] = *filter.BusinesesID
+		data["id"] = *filter.ID
 		wc = append(wc, "id = :id")
 	}
 	if filter.BusinesesID != nil {
@@ -50,9 +50,9 @@ func (s *Store) applyFilterDailyAgenda(filter agenda.DAQueryFilter, data map[str
 	}
 
 	if filter.Days != nil {
-		data["days"] = *filter.Days
-		data["now"] = time.Now().UTC()
-		wc = append(wc, "applicable_date >= :now AND applicable_date < :now + INTERVAL ':days days'")
+		data["now"] = time.Now().UTC().Format(time.DateOnly)
+		data["then"] = time.Now().UTC().AddDate(0, 0, *filter.Days).Format(time.DateOnly)
+		wc = append(wc, "applicable_date >= :now AND applicable_date < :then")
 	}
 
 	if len(wc) > 0 {

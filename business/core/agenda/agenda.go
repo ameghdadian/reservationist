@@ -22,10 +22,8 @@ type Storer interface {
 	CreateGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	UpdateGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
-	QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]GeneralAgenda, error)
+	QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter) (GeneralAgenda, error)
 	CountGeneralAgenda(ctx context.Context, filter GAQueryFilter) (int, error)
-	QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error)
-	QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (GeneralAgenda, error)
 
 	CreateDailyAgenda(ctx context.Context, agd DailyAgenda) error
 	UpdateDailyAgenda(ctx context.Context, agd DailyAgenda) error
@@ -117,35 +115,17 @@ func (c *Core) DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	return nil
 }
 
-func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, page int, rowsPerPage int) ([]GeneralAgenda, error) {
-	agds, err := c.storer.QueryGeneralAgenda(ctx, filter, orderBy, page, rowsPerPage)
+func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter) (GeneralAgenda, error) {
+	agd, err := c.storer.QueryGeneralAgenda(ctx, filter)
 	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
+		return GeneralAgenda{}, fmt.Errorf("query: %w", err)
 	}
 
-	return agds, nil
+	return agd, nil
 }
 
 func (c *Core) CountGeneralAgenda(ctx context.Context, filter GAQueryFilter) (int, error) {
 	return c.storer.CountGeneralAgenda(ctx, filter)
-}
-
-func (c *Core) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error) {
-	agd, err := c.storer.QueryGeneralAgendaByID(ctx, agdID)
-	if err != nil {
-		return GeneralAgenda{}, fmt.Errorf("query: generalAgendaID[%s]: %w", agdID, err)
-	}
-
-	return agd, nil
-}
-
-func (c *Core) QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (GeneralAgenda, error) {
-	agd, err := c.storer.QueryGeneralAgendaByBusinessID(ctx, bsnID)
-	if err != nil {
-		return GeneralAgenda{}, fmt.Errorf("query: bsnID[%s]: %w", bsnID, err)
-	}
-
-	return agd, nil
 }
 
 // -------------------------------------------------------------------------------------------------------

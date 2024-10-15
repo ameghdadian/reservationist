@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ameghdadian/service/business/core/agenda"
+	"github.com/ameghdadian/service/business/core/agenda/stores/agendadb"
 	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/core/appointment/stores/appointmentdb"
 	"github.com/ameghdadian/service/business/core/business"
@@ -233,17 +235,20 @@ type CoreAPIs struct {
 	User        *user.Core
 	Business    *business.Core
 	Appointment *appointment.Core
+	Agenda      *agenda.Core
 }
 
 func newCoreAPIs(log *logger.Logger, db *sqlx.DB) CoreAPIs {
 	usrCore := user.NewCore(log, userdb.NewStore(log, db))
 	bsnCore := business.NewCore(log, usrCore, businessdb.NewStore(log, db))
 	aptCore := appointment.NewCore(log, usrCore, bsnCore, appointmentdb.NewStore(log, db))
+	agdCore := agenda.NewCore(log, bsnCore, agendadb.NewStore(log, db))
 
 	return CoreAPIs{
 		User:        usrCore,
 		Business:    bsnCore,
 		Appointment: aptCore,
+		Agenda:      agdCore,
 	}
 }
 

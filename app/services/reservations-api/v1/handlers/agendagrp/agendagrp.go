@@ -86,7 +86,7 @@ func (h *Handlers) UpdateGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryGeneralAgendaByID(ctx, gAgdID)
+	agd, err := h.agdCore.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &gAgdID})
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):
@@ -120,7 +120,7 @@ func (h *Handlers) DeleteGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryGeneralAgendaByID(ctx, agdID)
+	agd, err := h.agdCore.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &agdID})
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):
@@ -153,7 +153,7 @@ func (h *Handlers) QueryGeneralAgendaByBusinessID(ctx context.Context, w http.Re
 		}
 	}
 
-	agd, err := h.agdCore.QueryGeneralAgendaByBusinessID(ctx, bsnID)
+	agd, err := h.agdCore.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{BusinesesID: &bsnID})
 	if err != nil {
 		return fmt.Errorf("querygeneralagendabybusinessid: bsnID[%s]: %w", bsnID, err)
 	}

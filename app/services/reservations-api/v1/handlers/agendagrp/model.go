@@ -83,8 +83,8 @@ func toCoreNewGeneralAgenda(app AppNewGeneralAgenda) (agenda.NewGeneralAgenda, e
 
 	return agenda.NewGeneralAgenda{
 		BusinessID:  bsnID,
-		OpensAt:     midnight.Add(time.Duration(app.OpensAt) * time.Second).UTC(),
-		ClosedAt:    midnight.Add(time.Duration(app.ClosedAt) * time.Second).UTC(),
+		OpensAt:     midnight.Add(time.Duration(app.OpensAt) * time.Second),
+		ClosedAt:    midnight.Add(time.Duration(app.ClosedAt) * time.Second),
 		Interval:    time.Duration(app.Interval) * time.Second,
 		WorkingDays: days,
 	}, nil
@@ -115,12 +115,12 @@ func toCoreUpdateGeneralAgenda(app AppUpdateGeneralAgenda) (agenda.UpdateGeneral
 
 	var opn *time.Time
 	if app.OpensAt != nil {
-		o := midnight.Add(time.Duration(*app.OpensAt) * time.Second).UTC()
+		o := midnight.Add(time.Duration(*app.OpensAt) * time.Second)
 		opn = TimePointer(o)
 	}
 	var cld *time.Time
 	if app.ClosedAt != nil {
-		c := midnight.Add(time.Duration(*app.ClosedAt) * time.Second).UTC()
+		c := midnight.Add(time.Duration(*app.ClosedAt) * time.Second)
 		cld = TimePointer(c)
 	}
 
@@ -224,8 +224,8 @@ func toCoreNewDailyAgenda(app AppNewDailyAgenda) (agenda.NewDailyAgenda, error) 
 
 	return agenda.NewDailyAgenda{
 		BusinessID:   bsnID,
-		OpensAt:      midnight.Add(time.Duration(app.OpensAt) * time.Second).UTC(),
-		ClosedAt:     midnight.Add(time.Duration(app.ClosedAt) * time.Second).UTC(),
+		OpensAt:      midnight.Add(time.Duration(app.OpensAt) * time.Second),
+		ClosedAt:     midnight.Add(time.Duration(app.ClosedAt) * time.Second),
 		Interval:     time.Duration(app.Interval) * time.Second,
 		Date:         date,
 		Availability: app.Availability,
@@ -254,12 +254,12 @@ func toCoreUpdateDailyAgenda(app AppUpdateDailyAgenda) (agenda.UpdateDailyAgenda
 
 	var opn *time.Time
 	if app.OpensAt != nil {
-		o := midnight.Add(time.Duration(*app.OpensAt) * time.Second).UTC()
+		o := midnight.Add(time.Duration(*app.OpensAt) * time.Second)
 		opn = TimePointer(o)
 	}
 	var cld *time.Time
 	if app.ClosedAt != nil {
-		c := midnight.Add(time.Duration(*app.ClosedAt) * time.Second).UTC()
+		c := midnight.Add(time.Duration(*app.ClosedAt) * time.Second)
 		cld = TimePointer(c)
 	}
 

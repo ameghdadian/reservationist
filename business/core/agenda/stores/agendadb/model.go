@@ -11,11 +11,11 @@ import (
 )
 
 type dbGeneralAgenda struct {
-	ID          uuid.UUID     `db:"general_agenda_id"`
+	ID          uuid.UUID     `db:"id"`
 	BusinessID  uuid.UUID     `db:"business_id"`
 	OpensAt     time.Time     `db:"opens_at"`
 	ClosedAt    time.Time     `db:"closed_at"`
-	Interval    time.Duration `db:"interval"`
+	Interval    int           `db:"interval"`
 	WorkingDays dbarray.Int32 `db:"working_days"`
 	DateCreated time.Time     `db:"date_created"`
 	DateUpdated time.Time     `db:"date_updated"`
@@ -32,7 +32,7 @@ func toDBGeneralAgenda(gAgd agenda.GeneralAgenda) dbGeneralAgenda {
 		BusinessID:  gAgd.BusinessID,
 		OpensAt:     gAgd.OpensAt.UTC(),
 		ClosedAt:    gAgd.ClosedAt.UTC(),
-		Interval:    gAgd.Interval,
+		Interval:    int(gAgd.Interval.Seconds()),
 		WorkingDays: days,
 		DateCreated: gAgd.DateCreated.UTC(),
 		DateUpdated: gAgd.DateUpdated.UTC(),
@@ -54,7 +54,7 @@ func toCoreGeneralAgenda(dbAgd dbGeneralAgenda) (agenda.GeneralAgenda, error) {
 		BusinessID:  dbAgd.BusinessID,
 		OpensAt:     dbAgd.OpensAt.In(time.Local),
 		ClosedAt:    dbAgd.ClosedAt.In(time.Local),
-		Interval:    dbAgd.Interval,
+		Interval:    time.Duration(dbAgd.Interval) * time.Second,
 		WorkingDays: days,
 		DateCreated: dbAgd.DateCreated.In(time.Local),
 		DateUpdated: dbAgd.DateUpdated.In(time.Local),
@@ -78,12 +78,12 @@ func toCoreGeneralAgendaSlice(dbgAgds []dbGeneralAgenda) ([]agenda.GeneralAgenda
 // ---------------------------------------------------------------------------------
 
 type dbDailyAgenda struct {
-	ID           uuid.UUID     `db:"daily_agenda_id"`
+	ID           uuid.UUID     `db:"id"`
 	BusinessID   uuid.UUID     `db:"business_id"`
 	OpensAt      sql.NullTime  `db:"opens_at"`
 	ClosedAt     sql.NullTime  `db:"closed_at"`
 	Interval     sql.NullInt64 `db:"interval"`
-	Date         string        `db:"date"`
+	Date         string        `db:"applicable_date"`
 	Availability bool          `db:"availability"`
 	DateCreated  time.Time     `db:"date_created"`
 	DateUpdated  time.Time     `db:"date_updated"`
@@ -103,7 +103,7 @@ func toDBDailyAgenda(gAgd agenda.DailyAgenda) dbDailyAgenda {
 		},
 		Interval: sql.NullInt64{
 			Int64: int64(gAgd.Interval.Seconds()),
-			Valid: gAgd.Interval >= 0,
+			Valid: gAgd.Interval.Seconds() >= 0,
 		},
 		Date:         gAgd.Date.UTC().Format(time.DateOnly),
 		Availability: true,
@@ -113,7 +113,7 @@ func toDBDailyAgenda(gAgd agenda.DailyAgenda) dbDailyAgenda {
 }
 
 func toCoreDailyAgenda(dbAgd dbDailyAgenda) (agenda.DailyAgenda, error) {
-	date, err := time.Parse(time.DateOnly, dbAgd.Date)
+	date, err := time.Parse(time.RFC3339, dbAgd.Date)
 	if err != nil {
 		return agenda.DailyAgenda{}, err
 	}
@@ -123,7 +123,7 @@ func toCoreDailyAgenda(dbAgd dbDailyAgenda) (agenda.DailyAgenda, error) {
 		BusinessID:   dbAgd.BusinessID,
 		OpensAt:      dbAgd.OpensAt.Time.In(time.Local),
 		ClosedAt:     dbAgd.ClosedAt.Time.In(time.Local),
-		Interval:     time.Duration(dbAgd.Interval.Int64),
+		Interval:     time.Duration(dbAgd.Interval.Int64) * time.Second,
 		Date:         date.In(time.Local),
 		Availability: dbAgd.Availability,
 		DateCreated:  dbAgd.DateCreated.In(time.Local),
