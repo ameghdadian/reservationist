@@ -8,7 +8,8 @@ import (
 )
 
 var orderByFields = map[string]string{
-	agenda.OrderByID: "id",
+	agenda.OrderByID:         "id",
+	agenda.OrderByBusinessID: "business_id",
 }
 
 func orderByClause(orderBy order.By) (string, error) {

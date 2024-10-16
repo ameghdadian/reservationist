@@ -10,13 +10,48 @@ import (
 	"github.com/google/uuid"
 )
 
+func parseGeneralAgendaFilter(r *http.Request) (agenda.GAQueryFilter, error) {
+	const (
+		filterByID         = "id"
+		filterByBusinessID = "business_id"
+	)
+
+	values := r.URL.Query()
+	var filter agenda.GAQueryFilter
+
+	if agdID := values.Get(filterByID); agdID != "" {
+		id, err := uuid.Parse(agdID)
+		if err != nil {
+			return agenda.GAQueryFilter{}, validate.NewFieldsError(filterByID, err)
+		}
+
+		filter.WithGenealAgendaID(id)
+	}
+
+	if bsnID := values.Get(filterByBusinessID); bsnID != "" {
+		id, err := uuid.Parse(bsnID)
+		if err != nil {
+			return agenda.GAQueryFilter{}, validate.NewFieldsError(filterByBusinessID, err)
+		}
+
+		filter.WithBusinessID(id)
+	}
+
+	if err := filter.Validate(); err != nil {
+		return agenda.GAQueryFilter{}, err
+	}
+
+	return filter, nil
+}
+
 func parseDailyAgendaFilter(r *http.Request) (agenda.DAQueryFilter, error) {
 	const (
-		filterByID   = "id"
-		filterByDate = "date"
-		filterByFrom = "from"
-		filterByTo   = "to"
-		filterByDays = "days"
+		filterByID         = "id"
+		filterByBusinessID = "business_id"
+		filterByDate       = "date"
+		filterByFrom       = "from"
+		filterByTo         = "to"
+		filterByDays       = "days"
 	)
 
 	values := r.URL.Query()
@@ -29,6 +64,15 @@ func parseDailyAgendaFilter(r *http.Request) (agenda.DAQueryFilter, error) {
 		}
 
 		filter.WithDailyAgendaID(id)
+	}
+
+	if bsnID := values.Get(filterByBusinessID); bsnID != "" {
+		id, err := uuid.Parse(bsnID)
+		if err != nil {
+			return agenda.DAQueryFilter{}, validate.NewFieldsError(filterByBusinessID, err)
+		}
+
+		filter.WithBusinessID(id)
 	}
 
 	if date := values.Get(filterByDate); date != "" {

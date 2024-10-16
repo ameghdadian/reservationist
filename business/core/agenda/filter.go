@@ -8,8 +8,8 @@ import (
 )
 
 type GAQueryFilter struct {
-	ID          *uuid.UUID `validate:"omitempty"`
-	BusinesesID *uuid.UUID `validate:"omitempty"`
+	ID          *uuid.UUID `validate:"omitempty,uuid"`
+	BusinesesID *uuid.UUID `validate:"omitempty,uuid"`
 }
 
 func (qf *GAQueryFilter) Validate() error {
@@ -31,11 +31,12 @@ func (qf *GAQueryFilter) WithBusinessID(bsnID uuid.UUID) {
 // --------------------------------------------------------------------
 
 type DAQueryFilter struct {
-	ID   *uuid.UUID `validate:"omitempty,uuid"`
-	Date *string    `validadte:"omitempty,exclude_with=From,To,Days"`
-	From *string    `validate:"omitempty,required_with=To"`
-	To   *string    `validate:"omitempty,required_with=From"`
-	Days *int       `validate:"omitempty,number,lte=30,exclude_with=From,To,Date"`
+	ID         *uuid.UUID `validate:"omitempty,uuid"`
+	BusinessID *uuid.UUID `validate:"omitempty,uuid"`
+	Date       *string    `validadte:"omitempty,exclude_with=From,To,Days"`
+	From       *string    `validate:"omitempty,required_with=To"`
+	To         *string    `validate:"omitempty,required_with=From"`
+	Days       *int       `validate:"omitempty,number,lte=30,exclude_with=From,To,Date"`
 }
 
 func (qf *DAQueryFilter) Validate() error {
@@ -48,6 +49,10 @@ func (qf *DAQueryFilter) Validate() error {
 
 func (qf *DAQueryFilter) WithDailyAgendaID(id uuid.UUID) {
 	qf.ID = &id
+}
+
+func (qf *DAQueryFilter) WithBusinessID(id uuid.UUID) {
+	qf.BusinessID = &id
 }
 
 func (qf *DAQueryFilter) WithDate(date string) {

@@ -43,6 +43,15 @@ func toAppGeneralAgenda(agd agenda.GeneralAgenda) AppGeneralAgenda {
 	}
 }
 
+func toAppGeneralAgendaSlice(agds []agenda.GeneralAgenda) []AppGeneralAgenda {
+	coll := make([]AppGeneralAgenda, len(agds))
+	for i, a := range agds {
+		coll[i] = toAppGeneralAgenda(a)
+	}
+
+	return coll
+}
+
 // ---------------------------------------------------------------------------------
 
 type AppNewGeneralAgenda struct {

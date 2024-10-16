@@ -12,6 +12,7 @@ import (
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/dbtest"
+	"github.com/ameghdadian/service/business/data/order"
 	"github.com/ameghdadian/service/foundation/docker"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -132,11 +133,27 @@ func crud(t *testing.T) {
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
-	// QueryByID
+	// Query and QueryByID
 
-	saved, err := api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &sd.gAgds[0].ID})
+	saved, err := api.Agenda.QueryGeneralAgendaByID(ctx, sd.gAgds[0].ID)
 	if err != nil {
 		t.Fatalf("Should be able to retrieve general agenda by ID: %s", err)
+	}
+
+	agds, err := api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &sd.gAgds[0].ID}, order.NewBy(agenda.DefaultOrderBy.Field, order.ASC), 1, 1)
+	if err != nil {
+		t.Fatalf("Should be able to retrieve general agenda by ID: %s", err)
+	}
+
+	if agds[0].DateCreated.UnixMilli() != sd.gAgds[0].DateCreated.UnixMilli() {
+		t.Logf("GOT: %v", agds[0].DateCreated)
+		t.Logf("EXP: %v", sd.gAgds[0].DateCreated)
+		t.Errorf("Should get back the same date created")
+	}
+	if agds[0].DateUpdated.UnixMilli() != sd.gAgds[0].DateUpdated.UnixMilli() {
+		t.Logf("GOT: %v", agds[0].DateUpdated)
+		t.Logf("EXP: %v", sd.gAgds[0].DateUpdated)
+		t.Errorf("Should get back the same date updated")
 	}
 
 	if saved.DateCreated.UnixMilli() != sd.gAgds[0].DateCreated.UnixMilli() {
@@ -154,8 +171,14 @@ func crud(t *testing.T) {
 	sd.gAgds[0].DateUpdated = time.Time{}
 	saved.DateCreated = time.Time{}
 	saved.DateUpdated = time.Time{}
+	agds[0].DateCreated = time.Time{}
+	agds[0].DateUpdated = time.Time{}
 
 	if diff := cmp.Diff(sd.gAgds[0], saved); diff != "" {
+		t.Errorf("Should get back the same general agenda, diff:\n%s", diff)
+	}
+
+	if diff := cmp.Diff(sd.gAgds[0], agds[0]); diff != "" {
 		t.Errorf("Should get back the same general agenda, diff:\n%s", diff)
 	}
 
@@ -182,7 +205,7 @@ func crud(t *testing.T) {
 		t.Fatalf("Should be able to create a general agenda: %s", err)
 	}
 
-	saved, err = api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &gagd.ID})
+	saved, err = api.Agenda.QueryGeneralAgendaByID(ctx, gagd.ID)
 	if err != nil {
 		t.Fatalf("Should be able to query general agenda by id: %s", err)
 	}
@@ -208,22 +231,6 @@ func crud(t *testing.T) {
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
-	// QueryByBusinessID
-
-	// ga, err := api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{BusinessID: &sd.bsns[0].ID})
-	ga, err := api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{BusinesesID: &sd.bsns[0].ID})
-	if err != nil {
-		t.Fatalf("Should be able to query general agenda by business id: %s", err)
-	}
-
-	ga.DateCreated = time.Time{}
-	ga.DateUpdated = time.Time{}
-
-	if diff := cmp.Diff(ga, sd.gAgds[0]); diff != "" {
-		t.Errorf("Should get back the same general agenda, diff:\n%s", diff)
-	}
-
-	// ----------------------------------------------------------------------------------------------------------------
 	// Update
 
 	wd, _ = agenda.GetWorkingDays(0, 1, 3)
@@ -233,7 +240,7 @@ func crud(t *testing.T) {
 		t.Fatalf("Should be able to update general agenda: %s", err)
 	}
 
-	saved, err = api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &sd.gAgds[0].ID})
+	saved, err = api.Agenda.QueryGeneralAgendaByID(ctx, sd.gAgds[0].ID)
 	if err != nil {
 		t.Fatalf("Should be able to query general agenda by id: %s", err)
 	}
@@ -261,7 +268,7 @@ func crud(t *testing.T) {
 		t.Fatalf("Should be able to delete general agenda")
 	}
 
-	agd, err = api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &sd.gAgds[0].ID})
+	agd, err = api.Agenda.QueryGeneralAgendaByID(ctx, sd.gAgds[0].ID)
 	if err != nil {
 		if !errors.Is(err, agenda.ErrNotFound) {
 			t.Fatalf("Should be deleted by now: %s", err)
@@ -372,21 +379,6 @@ func crud(t *testing.T) {
 	daSaved.DateUpdated = time.Time{}
 
 	if diff := cmp.Diff(dagd, daSaved); diff != "" {
-		t.Errorf("Should get back the same daily agenda, diff:\n%s", diff)
-	}
-
-	// ----------------------------------------------------------------------------------------------------------------
-	// QueryByBusinessID
-
-	da, err := api.Agenda.QueryDailyAgendaByBusinessID(ctx, sd.bsns[0].ID)
-	if err != nil {
-		t.Fatalf("Should be able to query daily agenda by business id: %s", err)
-	}
-
-	da[0].DateCreated = time.Time{}
-	da[0].DateUpdated = time.Time{}
-
-	if diff := cmp.Diff(da[0], sd.dAgds[0]); diff != "" {
 		t.Errorf("Should get back the same daily agenda, diff:\n%s", diff)
 	}
 

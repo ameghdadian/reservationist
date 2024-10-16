@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/ameghdadian/service/business/core/agenda"
-	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/business/web/v1/response"
@@ -21,13 +20,11 @@ var (
 
 type Handlers struct {
 	agdCore *agenda.Core
-	bsnCore *business.Core
 }
 
-func New(agdCore *agenda.Core, bsnCore *business.Core) *Handlers {
+func New(agdCore *agenda.Core) *Handlers {
 	return &Handlers{
 		agdCore: agdCore,
-		bsnCore: bsnCore,
 	}
 }
 
@@ -81,12 +78,12 @@ func (h *Handlers) UpdateGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	gAgdID, err := uuid.Parse(web.Param(r, "general_agenda_id"))
+	gAgdID, err := uuid.Parse(web.Param(r, "agenda_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &gAgdID})
+	agd, err := h.agdCore.QueryGeneralAgendaByID(ctx, gAgdID)
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):
@@ -115,12 +112,12 @@ func (h *Handlers) DeleteGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		return err
 	}
 
-	agdID, err := uuid.Parse(web.Param(r, "general_agenda_id"))
+	agdID, err := uuid.Parse(web.Param(r, "agenda_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &agdID})
+	agd, err := h.agdCore.QueryGeneralAgendaByID(ctx, agdID)
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):
@@ -137,29 +134,46 @@ func (h *Handlers) DeleteGeneralAgenda(ctx context.Context, w http.ResponseWrite
 	return web.Respond(ctx, w, nil, http.StatusNoContent)
 }
 
-func (h *Handlers) QueryGeneralAgendaByBusinessID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	bsnID, err := uuid.Parse(web.Param(r, "business_id"))
+func (h *Handlers) QueryGeneralAgenda(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	page, err := page.Parse(r)
+	if err != nil {
+		return err
+	}
+
+	filter, err := parseGeneralAgendaFilter(r)
+	if err != nil {
+		return err
+	}
+
+	orderBy, err := parseGeneralAgendaOrder(r)
+	if err != nil {
+		return err
+	}
+
+	agds, err := h.agdCore.QueryGeneralAgenda(ctx, filter, orderBy, page.Number, page.RowsPerPage)
+	if err != nil {
+		return fmt.Errorf("query: %w", err)
+	}
+
+	return web.Respond(ctx, w, toAppGeneralAgendaSlice(agds), http.StatusOK)
+}
+
+func (h *Handlers) QueryGeneralAgendaByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	agdID, err := uuid.Parse(web.Param(r, "agenda_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	_, err = h.bsnCore.QueryByID(ctx, bsnID)
+	agd, err := h.agdCore.QueryGeneralAgendaByID(ctx, agdID)
 	if err != nil {
-		switch {
-		case errors.Is(err, business.ErrNotFound):
-			return response.NewError(err, http.StatusBadRequest)
-		default:
-			return fmt.Errorf("querybyid: bsnID[%s]: %w", bsnID, err)
-		}
-	}
-
-	agd, err := h.agdCore.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{BusinesesID: &bsnID})
-	if err != nil {
-		return fmt.Errorf("querygeneralagendabybusinessid: bsnID[%s]: %w", bsnID, err)
+		return fmt.Errorf("querygeneralagendabyagendaid: agdID[%s]: %w", agdID, err)
 	}
 
 	return web.Respond(ctx, w, toAppGeneralAgenda(agd), http.StatusOK)
 }
+
+// ---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
 
 func (h *Handlers) CreateDailyAgenda(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	h, err := h.executeUnderTransaction(ctx)
@@ -196,7 +210,7 @@ func (h *Handlers) UpdateDailyAgenda(ctx context.Context, w http.ResponseWriter,
 		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	gAgdID, err := uuid.Parse(web.Param(r, "daily_agenda_id"))
+	gAgdID, err := uuid.Parse(web.Param(r, "agenda_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
@@ -230,7 +244,7 @@ func (h *Handlers) DeleteDailyAgenda(ctx context.Context, w http.ResponseWriter,
 		return err
 	}
 
-	agdID, err := uuid.Parse(web.Param(r, "daily_agenda_id"))
+	agdID, err := uuid.Parse(web.Param(r, "agenda_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
@@ -268,22 +282,6 @@ func (h *Handlers) QueryDailyAgenda(ctx context.Context, w http.ResponseWriter, 
 		return err
 	}
 
-	// TODO: /businesses/<business_id>/daily-agenda
-	bsnID, err := uuid.Parse(web.Param(r, "business_id"))
-	if err != nil {
-		return response.NewError(ErrInvalidID, http.StatusBadRequest)
-	}
-
-	_, err = h.bsnCore.QueryByID(ctx, bsnID)
-	if err != nil {
-		switch {
-		case errors.Is(err, business.ErrNotFound):
-			return response.NewError(err, http.StatusBadRequest)
-		default:
-			return fmt.Errorf("querybyid: bsnID[%s]: %w", bsnID, err)
-		}
-	}
-
 	agds, err := h.agdCore.QueryDailyAgenda(ctx, filter, orderBy, page.Number, page.RowsPerPage)
 	if err != nil {
 		return fmt.Errorf("query: %w", err)
@@ -295,4 +293,19 @@ func (h *Handlers) QueryDailyAgenda(ctx context.Context, w http.ResponseWriter, 
 	}
 
 	return web.Respond(ctx, w, response.NewPageDocument(toAppDailyAgendaSlice(agds), total, page.Number, page.RowsPerPage), http.StatusOK)
+}
+
+func (h *Handlers) QueryDailyAgendaByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	agdID, err := uuid.Parse(web.Param(r, "agenda_id"))
+	if err != nil {
+		return response.NewError(ErrInvalidID, http.StatusBadRequest)
+	}
+
+	agd, err := h.agdCore.QueryDailyAgendaByID(ctx, agdID)
+	if err != nil {
+		return fmt.Errorf("querydailyagendabyid: agdID[%s]: %w", agdID, err)
+	}
+
+	return web.Respond(ctx, w, toAppDailyAgenda(agd), http.StatusOK)
+
 }

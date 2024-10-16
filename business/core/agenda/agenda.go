@@ -22,7 +22,8 @@ type Storer interface {
 	CreateGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	UpdateGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
-	QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter) (GeneralAgenda, error)
+	QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]GeneralAgenda, error)
+	QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error)
 	CountGeneralAgenda(ctx context.Context, filter GAQueryFilter) (int, error)
 
 	CreateDailyAgenda(ctx context.Context, agd DailyAgenda) error
@@ -31,7 +32,6 @@ type Storer interface {
 	QueryDailyAgenda(ctx context.Context, filter DAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]DailyAgenda, error)
 	CountDailyAgenda(ctx context.Context, filter DAQueryFilter) (int, error)
 	QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (DailyAgenda, error)
-	QueryDailyAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) ([]DailyAgenda, error)
 }
 
 type Core struct {
@@ -115,10 +115,19 @@ func (c *Core) DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	return nil
 }
 
-func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter) (GeneralAgenda, error) {
-	agd, err := c.storer.QueryGeneralAgenda(ctx, filter)
+func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]GeneralAgenda, error) {
+	agds, err := c.storer.QueryGeneralAgenda(ctx, filter, orderBy, pageNumber, rowsPerPage)
 	if err != nil {
-		return GeneralAgenda{}, fmt.Errorf("query: %w", err)
+		return nil, fmt.Errorf("query: %w", err)
+	}
+
+	return agds, nil
+}
+
+func (c *Core) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error) {
+	agd, err := c.storer.QueryGeneralAgendaByID(ctx, agdID)
+	if err != nil {
+		return GeneralAgenda{}, fmt.Errorf("query: agdID[%s]: %w", agdID, err)
 	}
 
 	return agd, nil
@@ -218,13 +227,4 @@ func (c *Core) QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (Daily
 	}
 
 	return agd, nil
-}
-
-func (c *Core) QueryDailyAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) ([]DailyAgenda, error) {
-	agds, err := c.storer.QueryDailyAgendaByBusinessID(ctx, bsnID)
-	if err != nil {
-		return nil, fmt.Errorf("query: bsnID[%s]: %w", bsnID, err)
-	}
-
-	return agds, nil
 }
