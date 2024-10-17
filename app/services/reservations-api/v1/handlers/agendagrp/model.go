@@ -1,6 +1,7 @@
 package agendagrp
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,11 +13,10 @@ import (
 type AppGeneralAgenda struct {
 	ID          string `json:"id"`
 	BusinessID  string `json:"business_id"`
-	OpensAt     int    `json:"open_at"`
-	ClosedAt    int    `json:"closed_at"`
+	OpensAt     string `json:"open_at"`
+	ClosedAt    string `json:"closed_at"`
 	Interval    int    `json:"interval"`
 	WorkingDays []int  `json:"working_days"`
-	TZ          string `json:"timezone"`
 	DateCreated string `json:"date_created"`
 	DateUpdated string `json:"date_updated"`
 }
@@ -27,17 +27,13 @@ func toAppGeneralAgenda(agd agenda.GeneralAgenda) AppGeneralAgenda {
 		days[i] = int(d.DayOfWeedk())
 	}
 
-	opn := int(agd.OpensAt.Hour()*3600 + agd.OpensAt.Minute()*60 + agd.OpensAt.Second())
-	cld := int(agd.ClosedAt.Hour()*3600 + agd.ClosedAt.Minute()*60 + agd.ClosedAt.Second())
-
 	return AppGeneralAgenda{
 		ID:          agd.ID.String(),
 		BusinessID:  agd.BusinessID.String(),
-		OpensAt:     opn,
-		ClosedAt:    cld,
-		Interval:    int(agd.Interval),
+		OpensAt:     agd.OpensAt.Format(time.RFC3339),
+		ClosedAt:    agd.ClosedAt.Format(time.RFC3339),
+		Interval:    agd.Interval,
 		WorkingDays: days,
-		TZ:          time.Local.String(),
 		DateCreated: agd.DateCreated.Format(time.RFC3339),
 		DateUpdated: agd.DateUpdated.Format(time.RFC3339),
 	}
@@ -56,11 +52,10 @@ func toAppGeneralAgendaSlice(agds []agenda.GeneralAgenda) []AppGeneralAgenda {
 
 type AppNewGeneralAgenda struct {
 	BusinessID  string `json:"business_id" validate:"required,uuid"`
-	OpensAt     int    `json:"opens_at" validate:"required,gt=0,lte=86400,required_with=ClosedAt"`
-	ClosedAt    int    `json:"closed_at" validate:"required,gt=0,lte=86400,gtfield=OpensAt,required_with=OpensAt"`
+	OpensAt     string `json:"opens_at" validate:"required,required_with=ClosedAt"`
+	ClosedAt    string `json:"closed_at" validate:"required,required_with=OpensAt"`
 	Interval    int    `json:"interval" validate:"required,gt=0,lte=86400"`
 	WorkingDays []int  `json:"working_days" validate:"required,max=7,dive,gte=0,lte=6"`
-	TZ          string `json:"timezone" validate:"required,timezone"`
 }
 
 func (app AppNewGeneralAgenda) Validate() error {
@@ -86,15 +81,24 @@ func toCoreNewGeneralAgenda(app AppNewGeneralAgenda) (agenda.NewGeneralAgenda, e
 		days[i] = day
 	}
 
-	loc, _ := time.LoadLocation(app.TZ)
-	now := time.Now().In(loc)
-	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	opn, err := time.Parse(time.RFC3339, app.OpensAt)
+	if err != nil {
+		return agenda.NewGeneralAgenda{}, fmt.Errorf("parsing opens at: %w", err)
+	}
+	cld, err := time.Parse(time.RFC3339, app.ClosedAt)
+	if err != nil {
+		return agenda.NewGeneralAgenda{}, fmt.Errorf("parsing closed at: %w", err)
+	}
+
+	if cld.Before(opn) {
+		return agenda.NewGeneralAgenda{}, errors.New("Closed at time should be after Opens at time.")
+	}
 
 	return agenda.NewGeneralAgenda{
 		BusinessID:  bsnID,
-		OpensAt:     midnight.Add(time.Duration(app.OpensAt) * time.Second),
-		ClosedAt:    midnight.Add(time.Duration(app.ClosedAt) * time.Second),
-		Interval:    time.Duration(app.Interval) * time.Second,
+		OpensAt:     opn,
+		ClosedAt:    cld,
+		Interval:    app.Interval,
 		WorkingDays: days,
 	}, nil
 }
@@ -102,11 +106,10 @@ func toCoreNewGeneralAgenda(app AppNewGeneralAgenda) (agenda.NewGeneralAgenda, e
 // ---------------------------------------------------------------------------------
 
 type AppUpdateGeneralAgenda struct {
-	OpensAt     *int   `json:"opens_at" validate:"required,gt=0,lte=86400,required_with=ClosedAt"`
-	ClosedAt    *int   `json:"closed_at" validate:"required,gt=0,lte=86400,gtfield=OpensAt,required_with=OpensAt"`
-	Interval    *int   `json:"interval" validate:"required,gt=0,lte=86400"`
-	WorkingDays []int  `json:"working_days" validate:"required,max=7,dive,gte=0,lte=6"`
-	TZ          string `json:"timezone" validate:"required,timezone"`
+	OpensAt     *string `json:"opens_at" validate:"omitempty,required_with=ClosedAt"`
+	ClosedAt    *string `json:"closed_at" validate:"omitempty,required_with=OpensAt"`
+	Interval    *int    `json:"interval" validate:"omitempty,gt=0,lte=86400"`
+	WorkingDays []int   `json:"working_days" validate:"omitempty,max=7,dive,gte=0,lte=6"`
 }
 
 func (app AppUpdateGeneralAgenda) Validate() error {
@@ -118,18 +121,20 @@ func (app AppUpdateGeneralAgenda) Validate() error {
 }
 
 func toCoreUpdateGeneralAgenda(app AppUpdateGeneralAgenda) (agenda.UpdateGeneralAgenda, error) {
-	loc, _ := time.LoadLocation(app.TZ)
-	now := time.Now().In(loc)
-	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-
 	var opn *time.Time
 	if app.OpensAt != nil {
-		o := midnight.Add(time.Duration(*app.OpensAt) * time.Second)
+		o, err := time.Parse(time.RFC3339, *app.OpensAt)
+		if err != nil {
+			return agenda.UpdateGeneralAgenda{}, fmt.Errorf("parsing opens at: %w", err)
+		}
 		opn = TimePointer(o)
 	}
 	var cld *time.Time
 	if app.ClosedAt != nil {
-		c := midnight.Add(time.Duration(*app.ClosedAt) * time.Second)
+		c, err := time.Parse(time.RFC3339, *app.ClosedAt)
+		if err != nil {
+			return agenda.UpdateGeneralAgenda{}, fmt.Errorf("parsing closed at: %w", err)
+		}
 		cld = TimePointer(c)
 	}
 
@@ -147,7 +152,7 @@ func toCoreUpdateGeneralAgenda(app AppUpdateGeneralAgenda) (agenda.UpdateGeneral
 	return agenda.UpdateGeneralAgenda{
 		OpensAt:     opn,
 		ClosedAt:    cld,
-		Interval:    DurationPointer(time.Duration(*app.Interval) * time.Second),
+		Interval:    app.Interval,
 		WorkingDays: days,
 	}, nil
 
@@ -159,29 +164,24 @@ func toCoreUpdateGeneralAgenda(app AppUpdateGeneralAgenda) (agenda.UpdateGeneral
 type AppDailyAgenda struct {
 	ID           string `json:"id"`
 	BusinessID   string `json:"business_id"`
-	OpensAt      int    `json:"opens_at"`
-	ClosedAt     int    `json:"closed_at"`
+	OpensAt      string `json:"opens_at"`
+	ClosedAt     string `json:"closed_at"`
 	Interval     int    `json:"interval"`
 	Date         string `json:"date"`
 	Availability bool   `json:"availability"`
-	TZ           string `json:"timezone"`
 	DateCreated  string `json:"date_created"`
 	DateUpdated  string `json:"date_updated"`
 }
 
 func toAppDailyAgenda(agd agenda.DailyAgenda) AppDailyAgenda {
-	opn := int(agd.OpensAt.Hour()*3600 + agd.OpensAt.Minute()*60 + agd.OpensAt.Second())
-	cld := int(agd.ClosedAt.Hour()*3600 + agd.ClosedAt.Minute()*60 + agd.ClosedAt.Second())
-
 	return AppDailyAgenda{
 		ID:           agd.ID.String(),
 		BusinessID:   agd.BusinessID.String(),
-		OpensAt:      opn,
-		ClosedAt:     cld,
-		Interval:     int(time.Duration(agd.Interval)),
+		OpensAt:      agd.OpensAt.Format(time.RFC3339),
+		ClosedAt:     agd.ClosedAt.Format(time.RFC3339),
+		Interval:     agd.Interval,
 		Date:         agd.Date.Format(time.DateOnly),
 		Availability: agd.Availability,
-		TZ:           time.Local.String(),
 		DateCreated:  agd.DateCreated.Format(time.RFC3339),
 		DateUpdated:  agd.DateUpdated.Format(time.RFC3339),
 	}
@@ -200,12 +200,11 @@ func toAppDailyAgendaSlice(agds []agenda.DailyAgenda) []AppDailyAgenda {
 
 type AppNewDailyAgenda struct {
 	BusinessID   string `json:"business_id" validate:"required,uuid"`
-	OpensAt      int    `json:"opens_at" validate:"gt=0,lte=86400,required_with=ClosedAt"`
-	ClosedAt     int    `json:"closed_at" validate:"gt=0,lte=86400,gtfield=OpensAt,required_with=OpensAt"`
+	OpensAt      string `json:"opens_at" validate:"required_with=ClosedAt"`
+	ClosedAt     string `json:"closed_at" validate:"required_with=OpensAt"`
 	Interval     int    `json:"interval" validate:"gt=0,lte=86400"`
 	Date         string `json:"date" validate:"required"`
 	Availability bool   `json:"availability" validate:"required"`
-	TZ           string `json:"timezone" validate:"required,timezone"`
 }
 
 func (app AppNewDailyAgenda) Validate() error {
@@ -227,15 +226,24 @@ func toCoreNewDailyAgenda(app AppNewDailyAgenda) (agenda.NewDailyAgenda, error) 
 		return agenda.NewDailyAgenda{}, fmt.Errorf("parsing date: %w", err)
 	}
 
-	loc, _ := time.LoadLocation(app.TZ)
-	now := time.Now().In(loc)
-	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	opn, err := time.Parse(time.RFC3339, app.OpensAt)
+	if err != nil {
+		return agenda.NewDailyAgenda{}, fmt.Errorf("parsing opens at: %w", err)
+	}
+	cld, err := time.Parse(time.RFC3339, app.ClosedAt)
+	if err != nil {
+		return agenda.NewDailyAgenda{}, fmt.Errorf("parsing closed at: %w", err)
+	}
+
+	if cld.Before(opn) {
+		return agenda.NewDailyAgenda{}, errors.New("closed at time should be after Opens at time")
+	}
 
 	return agenda.NewDailyAgenda{
 		BusinessID:   bsnID,
-		OpensAt:      midnight.Add(time.Duration(app.OpensAt) * time.Second),
-		ClosedAt:     midnight.Add(time.Duration(app.ClosedAt) * time.Second),
-		Interval:     time.Duration(app.Interval) * time.Second,
+		OpensAt:      opn,
+		ClosedAt:     cld,
+		Interval:     app.Interval,
 		Date:         date,
 		Availability: app.Availability,
 	}, nil
@@ -244,31 +252,28 @@ func toCoreNewDailyAgenda(app AppNewDailyAgenda) (agenda.NewDailyAgenda, error) 
 // ---------------------------------------------------------------------------------
 
 type AppUpdateDailyAgenda struct {
-	OpensAt      *int    `json:"opens_at" validate:"gt=0,lte=86400,required_with=ClosedAt"`
-	ClosedAt     *int    `json:"closed_at" validate:"gt=0,lte=86400,gtfield=OpensAt,required_with=OpensAt"`
-	Interval     *int    `json:"interval" validate:"gt=0,lte=86400"`
+	OpensAt      *string `json:"opens_at" validate:"omitempty,required_with=ClosedAt"`
+	ClosedAt     *string `json:"closed_at" validate:"omitempty,required_with=OpensAt"`
+	Interval     *int    `json:"interval" validate:"omitempty,gt=0,lte=86400"`
 	Date         *string `json:"date" validate:"required"`
 	Availability *bool   `json:"availability" validate:"required"`
-	TZ           *string `json:"timezone" validate:"timezone,required_with=OpensAt"`
 }
 
 func toCoreUpdateDailyAgenda(app AppUpdateDailyAgenda) (agenda.UpdateDailyAgenda, error) {
-	var loc *time.Location
-	var now, midnight time.Time
-	if app.TZ != nil {
-		loc, _ = time.LoadLocation(*app.TZ)
-		now = time.Now().In(loc)
-		midnight = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-	}
-
 	var opn *time.Time
 	if app.OpensAt != nil {
-		o := midnight.Add(time.Duration(*app.OpensAt) * time.Second)
+		o, err := time.Parse(time.RFC3339, *app.OpensAt)
+		if err != nil {
+			return agenda.UpdateDailyAgenda{}, fmt.Errorf("parsing opens at: %w", err)
+		}
 		opn = TimePointer(o)
 	}
 	var cld *time.Time
 	if app.ClosedAt != nil {
-		c := midnight.Add(time.Duration(*app.ClosedAt) * time.Second)
+		c, err := time.Parse(time.RFC3339, *app.ClosedAt)
+		if err != nil {
+			return agenda.UpdateDailyAgenda{}, fmt.Errorf("parsing closed at: %w", err)
+		}
 		cld = TimePointer(c)
 	}
 
@@ -284,7 +289,7 @@ func toCoreUpdateDailyAgenda(app AppUpdateDailyAgenda) (agenda.UpdateDailyAgenda
 	return agenda.UpdateDailyAgenda{
 		OpensAt:      opn,
 		ClosedAt:     cld,
-		Interval:     DurationPointer(time.Duration(*app.Interval) * time.Second),
+		Interval:     app.Interval,
 		Date:         date,
 		Availability: app.Availability,
 	}, nil
@@ -297,8 +302,4 @@ func toCoreUpdateDailyAgenda(app AppUpdateDailyAgenda) (agenda.UpdateDailyAgenda
 
 func TimePointer(t time.Time) *time.Time {
 	return &t
-}
-
-func DurationPointer(d time.Duration) *time.Duration {
-	return &d
 }

@@ -104,7 +104,7 @@ func (s *Store) QueryGeneralAgenda(ctx context.Context, filter agenda.GAQueryFil
 	}
 
 	const q = `
-	SELECT 	
+	SELECT
 		id, business_id, opens_at, closed_at, interval, working_days, date_created, date_updated
 	FROM
 		general_agenda

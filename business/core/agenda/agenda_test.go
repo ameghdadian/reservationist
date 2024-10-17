@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		return
 	}
-	defer dbtest.StopDB(c)
+	// defer dbtest.StopDB(c)
 
 	m.Run()
 }
@@ -196,7 +196,7 @@ func crud(t *testing.T) {
 		BusinessID:  sd.bsns[1].ID,
 		OpensAt:     time.Date(now.Year(), now.Month(), now.Day(), 14, 10, 0, 0, loc),
 		ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc),
-		Interval:    60 * time.Second * 20,
+		Interval:    60 * 20,
 		WorkingDays: wd,
 	}
 
@@ -346,7 +346,7 @@ func crud(t *testing.T) {
 		BusinessID: sd.bsns[1].ID,
 		OpensAt:    time.Date(now.Year(), now.Month(), now.Day(), 14, 10, 0, 0, loc),
 		ClosedAt:   time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc),
-		Interval:   60 * time.Second * 20,
+		Interval:   60 * 20,
 		// Dates are stored in DB based on UTC timezone, and returned in time.Local. We're doing the same here to mimic that behavior.
 		Date:         time.Date(tommorow.Year(), tommorow.Month(), tommorow.Day(), 0, 0, 0, 0, time.UTC).In(time.Local),
 		Availability: true,
@@ -385,8 +385,8 @@ func crud(t *testing.T) {
 	// ----------------------------------------------------------------------------------------------------------------
 	// Update
 
-	dura := time.Duration(1) * time.Hour
-	uda := agenda.UpdateDailyAgenda{Interval: agenda.DurationPointer(dura)}
+	dura := 60 * 60
+	uda := agenda.UpdateDailyAgenda{Interval: &dura}
 	dagd, err = api.Agenda.UpdateDailyAgenda(ctx, sd.dAgds[0], uda)
 	if err != nil {
 		t.Fatalf("Should be able to update daily agenda: %s", err)

@@ -33,10 +33,10 @@ func (qf *GAQueryFilter) WithBusinessID(bsnID uuid.UUID) {
 type DAQueryFilter struct {
 	ID         *uuid.UUID `validate:"omitempty,uuid"`
 	BusinessID *uuid.UUID `validate:"omitempty,uuid"`
-	Date       *string    `validadte:"omitempty,exclude_with=From,To,Days"`
+	Date       *string    `validadte:"omitempty,excluded_with=From To Days"`
 	From       *string    `validate:"omitempty,required_with=To"`
 	To         *string    `validate:"omitempty,required_with=From"`
-	Days       *int       `validate:"omitempty,number,lte=30,exclude_with=From,To,Date"`
+	Days       *int       `validate:"omitempty,number,lte=30,excluded_with=From To Date"`
 }
 
 func (qf *DAQueryFilter) Validate() error {

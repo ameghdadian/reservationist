@@ -49,8 +49,23 @@ func NewCore(log *logger.Logger, bsnCore *business.Core, storer Storer) *Core {
 }
 
 func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error) {
+	storer, err := c.storer.ExecuteUnderTransaction(tx)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	bsnCore, err := c.bsnCore.ExecuteUnderTransaction(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	c = &Core{
+		storer:  storer,
+		log:     c.log,
+		bsnCore: bsnCore,
+	}
+
+	return c, nil
 }
 
 func (c *Core) CreateGeneralAgenda(ctx context.Context, na NewGeneralAgenda) (GeneralAgenda, error) {

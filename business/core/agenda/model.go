@@ -14,7 +14,7 @@ type GeneralAgenda struct {
 	// Parse this with RFC3339, then split it into time and timezone and store only these two inside psql 'time' type
 	OpensAt     time.Time // At App layer, receive seconds from the start of the day, then add this to default time.Time value and store it in UTC timezone
 	ClosedAt    time.Time // At App layer, receive secondds from the start of the day, then add this to default time.Time value and store it in UTC timezone
-	Interval    time.Duration
+	Interval    int
 	WorkingDays []Day
 	DateCreated time.Time
 	DateUpdated time.Time
@@ -24,14 +24,14 @@ type NewGeneralAgenda struct {
 	BusinessID  uuid.UUID
 	OpensAt     time.Time
 	ClosedAt    time.Time
-	Interval    time.Duration
+	Interval    int
 	WorkingDays []Day
 }
 
 type UpdateGeneralAgenda struct {
 	OpensAt     *time.Time
 	ClosedAt    *time.Time
-	Interval    *time.Duration
+	Interval    *int
 	WorkingDays []Day
 }
 
@@ -41,9 +41,9 @@ type UpdateGeneralAgenda struct {
 type DailyAgenda struct {
 	ID         uuid.UUID
 	BusinessID uuid.UUID
-	OpensAt    time.Time     // OPTIONAL
-	ClosedAt   time.Time     // OPTIONAL
-	Interval   time.Duration // OPTIONAL
+	OpensAt    time.Time // OPTIONAL
+	ClosedAt   time.Time // OPTIONAL
+	Interval   int       // OPTIONAL
 	// MANDATORY; FORMAT IT USING time.DateOnly and store it this way in date type of psql,
 	// Otherwise use https://github.com/googleapis/google-cloud-go/blob/v0.115.1/civil/civil.go#L253
 	Date         time.Time
@@ -56,7 +56,7 @@ type NewDailyAgenda struct {
 	BusinessID   uuid.UUID
 	OpensAt      time.Time
 	ClosedAt     time.Time
-	Interval     time.Duration
+	Interval     int
 	Date         time.Time
 	Availability bool
 }
@@ -64,7 +64,7 @@ type NewDailyAgenda struct {
 type UpdateDailyAgenda struct {
 	OpensAt      *time.Time
 	ClosedAt     *time.Time
-	Interval     *time.Duration
+	Interval     *int
 	Date         *time.Time
 	Availability *bool
 }

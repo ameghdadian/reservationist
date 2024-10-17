@@ -3,9 +3,11 @@ package tests
 import (
 	"time"
 
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/agendagrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/appointmentgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/businessgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/usergrp"
+	"github.com/ameghdadian/service/business/core/agenda"
 	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/core/user"
@@ -97,4 +99,66 @@ func toAppAppointments(apts []appointment.Appointment) []appointmentgrp.AppAppoi
 func toAppAppointmentPtr(a appointment.Appointment) *appointmentgrp.AppAppointment {
 	appApt := toAppAppointment(a)
 	return &appApt
+}
+
+// ----------------------------------------------------------
+
+func toAppGeneralAgenda(agd agenda.GeneralAgenda) agendagrp.AppGeneralAgenda {
+	days := make([]int, len(agd.WorkingDays))
+	for i, d := range agd.WorkingDays {
+		days[i] = int(d.DayOfWeedk())
+	}
+
+	return agendagrp.AppGeneralAgenda{
+		ID:          agd.ID.String(),
+		BusinessID:  agd.BusinessID.String(),
+		OpensAt:     agd.OpensAt.Format(time.RFC3339),
+		ClosedAt:    agd.ClosedAt.Format(time.RFC3339),
+		Interval:    int(agd.Interval),
+		WorkingDays: days,
+		DateCreated: agd.DateCreated.Format(time.RFC3339),
+		DateUpdated: agd.DateUpdated.Format(time.RFC3339),
+	}
+}
+
+func toAppGeneralAgendas(agds []agenda.GeneralAgenda) []agendagrp.AppGeneralAgenda {
+	coll := make([]agendagrp.AppGeneralAgenda, len(agds))
+	for i, a := range agds {
+		coll[i] = toAppGeneralAgenda(a)
+	}
+
+	return coll
+}
+
+func toAppGeneralAgendaPtr(app agenda.GeneralAgenda) *agendagrp.AppGeneralAgenda {
+	agd := toAppGeneralAgenda(app)
+	return &agd
+}
+
+func toAppDailyAgenda(agd agenda.DailyAgenda) agendagrp.AppDailyAgenda {
+	return agendagrp.AppDailyAgenda{
+		ID:           agd.ID.String(),
+		BusinessID:   agd.BusinessID.String(),
+		OpensAt:      agd.OpensAt.Format(time.RFC3339),
+		ClosedAt:     agd.ClosedAt.Format(time.RFC3339),
+		Interval:     int(time.Duration(agd.Interval)),
+		Date:         agd.Date.Format(time.DateOnly),
+		Availability: agd.Availability,
+		DateCreated:  agd.DateCreated.Format(time.RFC3339),
+		DateUpdated:  agd.DateUpdated.Format(time.RFC3339),
+	}
+}
+
+func toAppDailyAgendas(agds []agenda.DailyAgenda) []agendagrp.AppDailyAgenda {
+	col := make([]agendagrp.AppDailyAgenda, len(agds))
+	for i, a := range agds {
+		col[i] = toAppDailyAgenda(a)
+	}
+
+	return col
+}
+
+func toAppDailyAgendaPtr(app agenda.DailyAgenda) *agendagrp.AppDailyAgenda {
+	agd := toAppDailyAgenda(app)
+	return &agd
 }

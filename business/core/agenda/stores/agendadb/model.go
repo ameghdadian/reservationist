@@ -32,7 +32,7 @@ func toDBGeneralAgenda(gAgd agenda.GeneralAgenda) dbGeneralAgenda {
 		BusinessID:  gAgd.BusinessID,
 		OpensAt:     gAgd.OpensAt.UTC(),
 		ClosedAt:    gAgd.ClosedAt.UTC(),
-		Interval:    int(gAgd.Interval.Seconds()),
+		Interval:    gAgd.Interval,
 		WorkingDays: days,
 		DateCreated: gAgd.DateCreated.UTC(),
 		DateUpdated: gAgd.DateUpdated.UTC(),
@@ -54,7 +54,7 @@ func toCoreGeneralAgenda(dbAgd dbGeneralAgenda) (agenda.GeneralAgenda, error) {
 		BusinessID:  dbAgd.BusinessID,
 		OpensAt:     dbAgd.OpensAt.In(time.Local),
 		ClosedAt:    dbAgd.ClosedAt.In(time.Local),
-		Interval:    time.Duration(dbAgd.Interval) * time.Second,
+		Interval:    dbAgd.Interval,
 		WorkingDays: days,
 		DateCreated: dbAgd.DateCreated.In(time.Local),
 		DateUpdated: dbAgd.DateUpdated.In(time.Local),
@@ -83,7 +83,7 @@ type dbDailyAgenda struct {
 	OpensAt      sql.NullTime  `db:"opens_at"`
 	ClosedAt     sql.NullTime  `db:"closed_at"`
 	Interval     sql.NullInt64 `db:"interval"`
-	Date         string        `db:"applicable_date"`
+	Date         time.Time     `db:"applicable_date"`
 	Availability bool          `db:"availability"`
 	DateCreated  time.Time     `db:"date_created"`
 	DateUpdated  time.Time     `db:"date_updated"`
@@ -102,10 +102,10 @@ func toDBDailyAgenda(gAgd agenda.DailyAgenda) dbDailyAgenda {
 			Valid: !gAgd.ClosedAt.UTC().IsZero(),
 		},
 		Interval: sql.NullInt64{
-			Int64: int64(gAgd.Interval.Seconds()),
-			Valid: gAgd.Interval.Seconds() >= 0,
+			Int64: int64(gAgd.Interval),
+			Valid: gAgd.Interval > 0,
 		},
-		Date:         gAgd.Date.UTC().Format(time.DateOnly),
+		Date:         gAgd.Date.UTC(),
 		Availability: true,
 		DateCreated:  gAgd.DateCreated.UTC(),
 		DateUpdated:  gAgd.DateUpdated.UTC(),
@@ -113,18 +113,13 @@ func toDBDailyAgenda(gAgd agenda.DailyAgenda) dbDailyAgenda {
 }
 
 func toCoreDailyAgenda(dbAgd dbDailyAgenda) (agenda.DailyAgenda, error) {
-	date, err := time.Parse(time.RFC3339, dbAgd.Date)
-	if err != nil {
-		return agenda.DailyAgenda{}, err
-	}
-
 	return agenda.DailyAgenda{
 		ID:           dbAgd.ID,
 		BusinessID:   dbAgd.BusinessID,
 		OpensAt:      dbAgd.OpensAt.Time.In(time.Local),
 		ClosedAt:     dbAgd.ClosedAt.Time.In(time.Local),
-		Interval:     time.Duration(dbAgd.Interval.Int64) * time.Second,
-		Date:         date.In(time.Local),
+		Interval:     int(dbAgd.Interval.Int64),
+		Date:         dbAgd.Date.In(time.Local),
 		Availability: dbAgd.Availability,
 		DateCreated:  dbAgd.DateCreated.In(time.Local),
 		DateUpdated:  dbAgd.DateUpdated.In(time.Local),

@@ -146,7 +146,7 @@ tidy:
 	go mod tidy
 	go mod vendor
 
-test-race:
+test-race-only:
 	CGO_ENABLED=1 go test -race -count=1 ./...
 
 test-only:

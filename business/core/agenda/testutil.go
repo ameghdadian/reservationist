@@ -11,19 +11,14 @@ import (
 func TestGenerateNewGeneralAgendas(n int, bsnID uuid.UUID, userID uuid.UUID) ([]NewGeneralAgenda, error) {
 	newGAgds := make([]NewGeneralAgenda, n)
 
-	loc, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		return nil, err
-	}
-	now := time.Now().In(loc)
-	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	now := time.Now()
 
 	for i := range n {
 		newGAgds[i] = NewGeneralAgenda{
 			BusinessID:  bsnID,
-			OpensAt:     midnight.Add(9 * time.Hour),  // Business opens at 9 O'clock in NewYork timezone
-			ClosedAt:    midnight.Add(17 * time.Hour), // Business is closed at 17 o'clock in NewYork timezone
-			Interval:    60 * time.Second * 15,        // 15 minutes
+			OpensAt:     time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, time.Local),
+			ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), 17, 0, 0, 0, time.Local),
+			Interval:    60 * 15, // 15 minutes
 			WorkingDays: []Day{{2}, {4}, {6}},
 		}
 	}
@@ -54,22 +49,15 @@ func TestGenerateSeedGeneralAgendas(n int, agdCore *Core, bsnID uuid.UUID, userI
 func TestGenerateNewDailyAgendas(n int, bsnID uuid.UUID, userID uuid.UUID) ([]NewDailyAgenda, error) {
 	newDAgds := make([]NewDailyAgenda, n)
 
-	loc, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		return nil, err
-	}
-	now := time.Now().In(loc)
-	then := now.AddDate(0, 0, 2)
-	thenMidnight := time.Date(then.Year(), then.Month(), then.Day(), 0, 0, 0, 0, loc)
+	then := time.Now().AddDate(0, 0, 2)
 
 	for i := range n {
 		newDAgds[i] = NewDailyAgenda{
-			BusinessID: bsnID,
-			OpensAt:    thenMidnight.Add(9 * time.Hour),  // Business opens at 9 O'clock in NewYork timezone
-			ClosedAt:   thenMidnight.Add(12 * time.Hour), // Business is closed at 12 o'clock in NewYork timezone
-			Interval:   60 * time.Second * 10,            // 15 minutes
-			// Dates are stored in DB based on UTC timezone, and returned in time.Local. We're doing the same here to mimic that behavior.
-			Date:         time.Date(thenMidnight.Year(), thenMidnight.Month(), thenMidnight.Day(), 0, 0, 0, 0, time.UTC).In(time.Local),
+			BusinessID:   bsnID,
+			OpensAt:      time.Date(then.Year(), then.Month(), then.Day(), 9, 0, 0, 0, time.Local),
+			ClosedAt:     time.Date(then.Year(), then.Month(), then.Day(), 12, 0, 0, 0, time.Local),
+			Interval:     60 * 10, // 10 minutes
+			Date:         time.Date(then.Year(), then.Month(), then.Day(), 0, 0, 0, 0, time.Local),
 			Availability: true,
 		}
 	}
@@ -97,7 +85,7 @@ func TestGenerateSeedDailyAgendas(n int, agdCore *Core, bsnID uuid.UUID, userID 
 
 // ---------------------------------------------------------------------------------------------
 
-// GetWorkingTest should only be used for testing purposes.
+// GetWorkingDays should only be used for testing purposes.
 func GetWorkingDays(val ...uint) ([]Day, error) {
 	days := make([]Day, len(val))
 

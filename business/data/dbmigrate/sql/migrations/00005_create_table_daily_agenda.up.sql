@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS daily_agenda (
     opens_at            TIMESTAMP   NULL,
     closed_at           TIMESTAMP   NULL,
     interval            INTEGER     NULL    CHECK(interval > 0 AND interval <= 86400),
-    applicable_date     DATE        NOT NULL,
+    applicable_date     TIMESTAMP   NOT NULL,
     availability        BOOLEAN     NOT NULL,
     date_created        TIMESTAMP   NOT NULL,
     date_updated        TIMESTAMP   NOT NULL,
