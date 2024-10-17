@@ -155,7 +155,12 @@ func (h *Handlers) QueryGeneralAgenda(ctx context.Context, w http.ResponseWriter
 		return fmt.Errorf("query: %w", err)
 	}
 
-	return web.Respond(ctx, w, toAppGeneralAgendaSlice(agds), http.StatusOK)
+	total, err := h.agdCore.CountGeneralAgenda(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("query: %w", err)
+	}
+
+	return web.Respond(ctx, w, response.NewPageDocument(toAppGeneralAgendaSlice(agds), total, page.Number, page.RowsPerPage), http.StatusOK)
 }
 
 func (h *Handlers) QueryGeneralAgendaByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
