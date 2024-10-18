@@ -12,3 +12,6 @@ nodes:
   # Database
   - containerPort: 5432
     hostPort: 5432
+  # Redis
+  - containerPort: 6379
+    hostPort: 6379

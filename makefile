@@ -93,6 +93,7 @@ dev-up:
 	kubectl wait --timeout=120s --namespace=local-path-storage --for=condition=Available deployment/local-path-provisioner
 
 	kind load docker-image $(POSTGRES) --name $(KIND_CLUSTER)
+	kind load docker-image $(REDIS) --name $(KIND_CLUSTER)
 
 dev-down:
 	kind delete cluster --name $(KIND_CLUSTER)
@@ -106,6 +107,10 @@ dev-apply:
 	helm upgrade --install db zarf/k8s/charts/database \
 		-f zarf/k8s/charts/database/values.dev.yaml
 	kubectl rollout status --namespace=$(NAMESPACE) --watch --timeout=120s sts/database	
+
+	helm upgrade --install redis zarf/k8s/charts/redis \
+		--set image=$(REDIS)
+	kubectl rollout status --namespace=$(NAMESPACE) --watch --timeout=120s sts/redis
 
 	helm upgrade --install reservationist zarf/k8s/charts/app \
 		-f zarf/k8s/charts/app/values.dev.yaml \
