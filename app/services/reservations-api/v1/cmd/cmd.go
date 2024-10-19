@@ -20,6 +20,7 @@ import (
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/ardanlabs/conf/v3"
+	"github.com/hibiken/asynq"
 )
 
 func Main(build string, routeAdder v1.RouterAdder) error {
@@ -78,6 +79,9 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 			MaxOpenConns int    `conf:"default:0"`
 			DisableTLS   bool   `conf:"default:true"`
 		}
+		Redis struct {
+			Addr string `conf:"default:0.0.0.0:6379"`
+		}
 		Auth struct {
 			KeysFolder string `conf:"default:zarf/keys/"`
 			ActiveKID  string `conf:"963df661-d92e-4991-b519-77d838a21705"`
@@ -115,7 +119,7 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	expvar.NewString("build").Set(build)
 
 	// ------------------------------------------------------------------------------
-	// Initialize authentication support
+	// Initialize database support
 
 	log.Info(ctx, "startup", "status", "initializing database support", "host", cfg.DB.Host)
 
@@ -134,6 +138,12 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	defer func() {
 		log.Info(ctx, "shutdown", "status", "stopping database support", "host", cfg.DB.Host)
 	}()
+
+	// ------------------------------------------------------------------------------
+	// Initialize async task scheduler support
+
+	client := asynq.NewClient(asynq.RedisClientOpt{Addr: cfg.Redis.Addr})
+	defer client.Close()
 
 	// ------------------------------------------------------------------------------
 	// Initialize authentication support
@@ -174,11 +184,12 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	cfgMux := v1.APIMuxConfig{
-		Build:    build,
-		Shutdown: shutdown,
-		Log:      log,
-		Auth:     auth,
-		DB:       db,
+		Build:      build,
+		Shutdown:   shutdown,
+		Log:        log,
+		Auth:       auth,
+		DB:         db,
+		TaskClient: client,
 	}
 
 	apiMux := v1.APIMux(cfgMux, routeAdder)
@@ -214,6 +225,157 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 			return fmt.Errorf("could not stop server gracefully: %w", err)
 		}
 		log.Info(ctx, "Received shutdown signal, exitting")
+	}
+
+	return nil
+}
+
+func InitTaskWorkers(build string, taskRouter v1.TaskRouter) error {
+	var log *logger.Logger
+
+	events := logger.Events{
+		Error: func(ctx context.Context, r logger.Record) {
+			log.Info(ctx, "************ SEND ALERT ************")
+		},
+	}
+
+	traceIDFunc := func(ctx context.Context) string {
+		return web.GetTraceID(ctx)
+	}
+
+	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RESERVATIONS-API", traceIDFunc, events)
+
+	// -----------------------------------------------------------------------
+
+	ctx := context.Background()
+
+	if err := initWorkers(ctx, log, build, taskRouter); err != nil {
+		log.Error(ctx, "startup", "msg", err)
+		return err
+	}
+
+	return nil
+}
+
+func initWorkers(ctx context.Context, log *logger.Logger, build string, taskRouter v1.TaskRouter) error {
+
+	// ------------------------------------------------------------------------------
+	// GOMAXPROCS
+
+	log.Info(ctx, "startup", "GOMAXPROCS", runtime.GOMAXPROCS(0), "build", build)
+
+	// ------------------------------------------------------------------------------
+	// Configuration
+
+	cfg := struct {
+		conf.Version
+		Worker struct {
+			ShutdownTimeout time.Duration `conf:"default:20s"`
+			NumOfWorkers    int           `conf:"default:10"`
+		}
+		DB struct {
+			User         string `conf:"default:postgres"`
+			Password     string `conf:"default:postgres,mask"`
+			Host         string `conf:"default:database-service.reservations-system.svc.cluster.local"`
+			Name         string `conf:"default:postgres"`
+			MaxIdleConns int    `conf:"default:2"`
+			MaxOpenConns int    `conf:"default:0"`
+			DisableTLS   bool   `conf:"default:true"`
+		}
+		Redis struct {
+			Addr string `conf:"default:0.0.0.0:6379"`
+		}
+	}{
+		Version: conf.Version{
+			Build: build,
+			Desc:  "AMIR. ME.",
+		},
+	}
+
+	const prefix = "TASKS"
+	help, err := conf.Parse(prefix, &cfg)
+	if err != nil {
+		if errors.Is(err, conf.ErrHelpWanted) {
+			fmt.Println(help)
+			return nil
+		}
+		return fmt.Errorf("parsing config: %w", err)
+	}
+
+	// ------------------------------------------------------------------------------
+	// App Starting
+
+	log.Info(ctx, "starting service", "version", build)
+	defer log.Info(ctx, "shutdown complete")
+
+	out, err := conf.String(&cfg)
+	if err != nil {
+		return fmt.Errorf("generating config for output: %w", err)
+	}
+	log.Info(ctx, "startup", "config", out)
+
+	expvar.NewString("build").Set(build)
+
+	// ------------------------------------------------------------------------------
+	// Initialize database support
+
+	log.Info(ctx, "startup", "status", "initializing database support", "host", cfg.DB.Host)
+
+	db, err := db.Open(db.Config{
+		User:         cfg.DB.User,
+		Password:     cfg.DB.Password,
+		Host:         cfg.DB.Host,
+		Name:         cfg.DB.Name,
+		MaxIdleConns: cfg.DB.MaxIdleConns,
+		MaxOpenConns: cfg.DB.MaxOpenConns,
+		DisableTLS:   cfg.DB.DisableTLS,
+	})
+	if err != nil {
+		return fmt.Errorf("connecting to db: %w", err)
+	}
+	defer func() {
+		log.Info(ctx, "shutdown", "status", "stopping database support", "host", cfg.DB.Host)
+	}()
+
+	// ------------------------------------------------------------------------------
+	// Initialize task worker server
+
+	srv := asynq.NewServer(
+		asynq.RedisClientOpt{Addr: cfg.Redis.Addr},
+		asynq.Config{
+			BaseContext:     func() context.Context { return ctx },
+			Concurrency:     cfg.Worker.NumOfWorkers,
+			ShutdownTimeout: cfg.Worker.ShutdownTimeout,
+		},
+	)
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+
+	mux := asynq.NewServeMux()
+	cfgMux := v1.TaskMuxConfig{
+		DB:  db,
+		Log: log,
+		Mux: mux,
+	}
+	v1.TaskMux(cfgMux, taskRouter)
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		log.Info(ctx, "Number of workers:", "count", cfg.Worker.NumOfWorkers)
+		serverErrors <- srv.Run(mux)
+	}()
+
+	// ------------------------------------------------------------------------------
+	// Shutdown
+
+	select {
+	case err := <-serverErrors:
+		log.Info(ctx, "Error while running server", "err", err)
+
+	case <-shutdown:
+		log.Info(ctx, "Received shutdown signal, exitting")
+		srv.Shutdown()
 	}
 
 	return nil

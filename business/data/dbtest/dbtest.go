@@ -23,6 +23,7 @@ import (
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/hibiken/asynq"
 	"github.com/jmoiron/sqlx"
 
 	db "github.com/ameghdadian/service/business/data/dbsql/pgx"
@@ -53,12 +54,13 @@ func StopDB(c *docker.Container) {
 
 // ================================================================
 type Test struct {
-	DB       *sqlx.DB
-	Log      *logger.Logger
-	CoreAPIs CoreAPIs
-	Teardown func()
-	t        *testing.T
-	V1       struct {
+	DB         *sqlx.DB
+	TaskClient *asynq.Client
+	Log        *logger.Logger
+	CoreAPIs   CoreAPIs
+	Teardown   func()
+	t          *testing.T
+	V1         struct {
 		Auth *auth.Auth
 	}
 }
@@ -66,7 +68,7 @@ type Test struct {
 // NewTest creates a test database inside a Docker container. It creates the
 // required table structure but the database is otherwise empty. It returns
 // the database to use as well as a function to call at the end of the test.
-func NewTest(t *testing.T, c *docker.Container) *Test {
+func NewTest(t *testing.T, c *docker.Container, rc *docker.Container) *Test {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -131,7 +133,8 @@ func NewTest(t *testing.T, c *docker.Container) *Test {
 	var buf bytes.Buffer
 	log := logger.New(&buf, logger.LevelInfo, "TEST", func(context.Context) string { return web.GetTraceID(ctx) })
 
-	coreAPIs := newCoreAPIs(log, db)
+	taskClient := asynq.NewClient(asynq.RedisClientOpt{Addr: rc.Host})
+	coreAPIs := newCoreAPIs(log, db, taskClient)
 
 	t.Log("Ready for testing ...")
 
@@ -153,6 +156,7 @@ func NewTest(t *testing.T, c *docker.Container) *Test {
 	teardown := func() {
 		t.Helper()
 		db.Close()
+		taskClient.Close()
 
 		fmt.Println("******************** LOGS ********************")
 		fmt.Print(buf.String())
@@ -160,11 +164,12 @@ func NewTest(t *testing.T, c *docker.Container) *Test {
 	}
 
 	test := Test{
-		DB:       db,
-		Log:      log,
-		CoreAPIs: coreAPIs,
-		Teardown: teardown,
-		t:        t,
+		DB:         db,
+		TaskClient: taskClient,
+		Log:        log,
+		CoreAPIs:   coreAPIs,
+		Teardown:   teardown,
+		t:          t,
 		V1: struct {
 			Auth *auth.Auth
 		}{
@@ -238,10 +243,12 @@ type CoreAPIs struct {
 	Agenda      *agenda.Core
 }
 
-func newCoreAPIs(log *logger.Logger, db *sqlx.DB) CoreAPIs {
+func newCoreAPIs(log *logger.Logger, db *sqlx.DB, taskClient *asynq.Client) CoreAPIs {
+	aptTask := appointment.NewTask(taskClient)
+
 	usrCore := user.NewCore(log, userdb.NewStore(log, db))
 	bsnCore := business.NewCore(log, usrCore, businessdb.NewStore(log, db))
-	aptCore := appointment.NewCore(log, usrCore, bsnCore, appointmentdb.NewStore(log, db))
+	aptCore := appointment.NewCore(log, usrCore, bsnCore, appointmentdb.NewStore(log, db), aptTask)
 	agdCore := agenda.NewCore(log, bsnCore, agendadb.NewStore(log, db))
 
 	return CoreAPIs{

@@ -38,14 +38,16 @@ type Core struct {
 	log     *logger.Logger
 	usrCore *user.Core
 	bsnCore *business.Core
+	task    *Task
 }
 
-func NewCore(log *logger.Logger, usrCore *user.Core, bsnCore *business.Core, storer Storer) *Core {
+func NewCore(log *logger.Logger, usrCore *user.Core, bsnCore *business.Core, storer Storer, task *Task) *Core {
 	return &Core{
 		storer:  storer,
 		log:     log,
 		usrCore: usrCore,
 		bsnCore: bsnCore,
+		task:    task,
 	}
 }
 
@@ -70,6 +72,7 @@ func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error
 		log:     c.log,
 		usrCore: usrCore,
 		bsnCore: bsnCore,
+		task:    c.task,
 	}
 
 	return c, nil

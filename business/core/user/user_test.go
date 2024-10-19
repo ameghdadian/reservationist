@@ -12,12 +12,14 @@ import (
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/dbtest"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/redistest"
 	"github.com/ameghdadian/service/foundation/docker"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
 
 var c *docker.Container
+var rc *docker.Container
 
 func TestMain(m *testing.M) {
 	var err error
@@ -29,6 +31,13 @@ func TestMain(m *testing.M) {
 	}
 	defer dbtest.StopDB(c)
 
+	fmt.Println("Starting a new redis")
+	rc, err = redistest.StartRedis()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer redistest.StopRedis(rc)
 	m.Run()
 }
 
@@ -58,7 +67,7 @@ func crud(t *testing.T) {
 
 	// ===================================================
 
-	test := dbtest.NewTest(t, c)
+	test := dbtest.NewTest(t, c, rc)
 	defer func() {
 		if r := recover(); r != nil {
 			t.Log(r)

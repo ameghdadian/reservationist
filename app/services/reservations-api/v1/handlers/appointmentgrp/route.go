@@ -14,22 +14,26 @@ import (
 	"github.com/ameghdadian/service/business/web/v1/mid"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
+	"github.com/hibiken/asynq"
 	"github.com/jmoiron/sqlx"
 )
 
 type Config struct {
-	Build string
-	Log   *logger.Logger
-	DB    *sqlx.DB
-	Auth  *auth.Auth
+	Build      string
+	Log        *logger.Logger
+	DB         *sqlx.DB
+	Auth       *auth.Auth
+	TaskClient *asynq.Client
 }
 
 func Routes(app *web.App, cfg Config) {
 	const version = "v1"
 
+	aptTask := appointment.NewTask(cfg.TaskClient)
+
 	usrCore := user.NewCore(cfg.Log, userdb.NewStore(cfg.Log, cfg.DB))
 	bsnCore := business.NewCore(cfg.Log, usrCore, businessdb.NewStore(cfg.Log, cfg.DB))
-	aptCore := appointment.NewCore(cfg.Log, usrCore, bsnCore, appointmentdb.NewStore(cfg.Log, cfg.DB))
+	aptCore := appointment.NewCore(cfg.Log, usrCore, bsnCore, appointmentdb.NewStore(cfg.Log, cfg.DB), aptTask)
 
 	authen := mid.Authenticate(cfg.Auth)
 	ruleAdminOnly := mid.Authorize(cfg.Auth, auth.RuleAdminOnly)

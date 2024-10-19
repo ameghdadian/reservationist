@@ -5,6 +5,7 @@ import (
 
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/cmd"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/cmd/all"
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/cmd/tasks"
 )
 
 /*
@@ -26,6 +27,10 @@ func main() {
 	switch routes {
 	case "all":
 		if err := cmd.Main(build, all.Routes()); err != nil {
+			os.Exit(1)
+		}
+	case "tasks":
+		if err := cmd.InitTaskWorkers(build, tasks.Handlers()); err != nil {
 			os.Exit(1)
 		}
 	}
