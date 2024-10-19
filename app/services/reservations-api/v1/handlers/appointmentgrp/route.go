@@ -19,17 +19,18 @@ import (
 )
 
 type Config struct {
-	Build      string
-	Log        *logger.Logger
-	DB         *sqlx.DB
-	Auth       *auth.Auth
-	TaskClient *asynq.Client
+	Build         string
+	Log           *logger.Logger
+	DB            *sqlx.DB
+	Auth          *auth.Auth
+	TaskClient    *asynq.Client
+	TaskInspector *asynq.Inspector
 }
 
 func Routes(app *web.App, cfg Config) {
 	const version = "v1"
 
-	aptTask := appointment.NewTask(cfg.TaskClient)
+	aptTask := appointment.NewTask(cfg.TaskClient, cfg.TaskInspector)
 
 	usrCore := user.NewCore(cfg.Log, userdb.NewStore(cfg.Log, cfg.DB))
 	bsnCore := business.NewCore(cfg.Log, usrCore, businessdb.NewStore(cfg.Log, cfg.DB))

@@ -39,11 +39,12 @@ func (add) Add(app *web.App, cfg v1.APIMuxConfig) {
 	})
 
 	appointmentgrp.Routes(app, appointmentgrp.Config{
-		Build:      cfg.Build,
-		Log:        cfg.Log,
-		DB:         cfg.DB,
-		Auth:       cfg.Auth,
-		TaskClient: cfg.TaskClient,
+		Build:         cfg.Build,
+		Log:           cfg.Log,
+		DB:            cfg.DB,
+		Auth:          cfg.Auth,
+		TaskClient:    cfg.TaskClient,
+		TaskInspector: cfg.TaskInspector,
 	})
 
 	agendagrp.Routes(app, agendagrp.Config{

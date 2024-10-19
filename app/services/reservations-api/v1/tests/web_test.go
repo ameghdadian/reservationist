@@ -62,11 +62,12 @@ func Test_Web(t *testing.T) {
 	shutdown := make(chan os.Signal, 1)
 	tests := WebTests{
 		app: v1.APIMux(v1.APIMuxConfig{
-			Shutdown:   shutdown,
-			Log:        test.Log,
-			Auth:       test.V1.Auth,
-			DB:         test.DB,
-			TaskClient: test.TaskClient,
+			Shutdown:      shutdown,
+			Log:           test.Log,
+			Auth:          test.V1.Auth,
+			DB:            test.DB,
+			TaskClient:    test.TaskClient,
+			TaskInspector: test.TaskInspector,
 		}, all.Routes()),
 		userToken:  test.TokenV1("user@example.com", "gophers"),
 		adminToken: test.TokenV1("admin@example.com", "gophers"),

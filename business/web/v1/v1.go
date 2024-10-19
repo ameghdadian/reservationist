@@ -12,12 +12,13 @@ import (
 )
 
 type APIMuxConfig struct {
-	Build      string
-	Shutdown   chan os.Signal
-	Log        *logger.Logger
-	Auth       *auth.Auth
-	DB         *sqlx.DB
-	TaskClient *asynq.Client
+	Build         string
+	Shutdown      chan os.Signal
+	Log           *logger.Logger
+	Auth          *auth.Auth
+	DB            *sqlx.DB
+	TaskClient    *asynq.Client
+	TaskInspector *asynq.Inspector
 }
 
 type RouterAdder interface {

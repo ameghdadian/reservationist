@@ -113,6 +113,11 @@ func (c *Core) Create(ctx context.Context, na NewAppointment) (Appointment, erro
 		return Appointment{}, fmt.Errorf("create: %w", err)
 	}
 
+	_, err = c.task.NewSendSMSTask(usr.ID, na.ScheduledOn, apt.ID.String())
+	if err != nil {
+		return Appointment{}, fmt.Errorf("newsendsmstask: %w", err)
+	}
+
 	return apt, nil
 }
 
@@ -136,6 +141,11 @@ func (c *Core) Update(ctx context.Context, apt Appointment, uapt UpdateAppointme
 
 	if uapt.ScheduledOn != nil {
 		apt.ScheduledOn = *uapt.ScheduledOn
+
+		_, err := c.task.updateSendSMSTask(apt.UserID, *uapt.ScheduledOn, apt.ID.String())
+		if err != nil {
+			return Appointment{}, fmt.Errorf("updatesendsmstask: %w", err)
+		}
 	}
 
 	apt.DateUpdated = time.Now()
@@ -149,6 +159,10 @@ func (c *Core) Update(ctx context.Context, apt Appointment, uapt UpdateAppointme
 func (c *Core) Delete(ctx context.Context, apt Appointment) error {
 	if err := c.storer.Delete(ctx, apt); err != nil {
 		return fmt.Errorf("delete: %w", err)
+	}
+
+	if err := c.task.cancelSendSMSTask(apt.ID.String()); err != nil {
+		return fmt.Errorf("cancelsendsmstask: %w", err)
 	}
 
 	return nil

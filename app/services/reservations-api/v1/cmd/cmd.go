@@ -142,8 +142,12 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	// ------------------------------------------------------------------------------
 	// Initialize async task scheduler support
 
-	client := asynq.NewClient(asynq.RedisClientOpt{Addr: cfg.Redis.Addr})
-	defer client.Close()
+	opt := asynq.RedisClientOpt{Addr: cfg.Redis.Addr}
+	taskClient := asynq.NewClient(opt)
+	defer taskClient.Close()
+
+	taskInspector := asynq.NewInspector(opt)
+	defer taskInspector.Close()
 
 	// ------------------------------------------------------------------------------
 	// Initialize authentication support
@@ -184,12 +188,13 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	cfgMux := v1.APIMuxConfig{
-		Build:      build,
-		Shutdown:   shutdown,
-		Log:        log,
-		Auth:       auth,
-		DB:         db,
-		TaskClient: client,
+		Build:         build,
+		Shutdown:      shutdown,
+		Log:           log,
+		Auth:          auth,
+		DB:            db,
+		TaskClient:    taskClient,
+		TaskInspector: taskInspector,
 	}
 
 	apiMux := v1.APIMux(cfgMux, routeAdder)

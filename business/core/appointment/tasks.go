@@ -17,12 +17,14 @@ const (
 )
 
 type Task struct {
-	client *asynq.Client
+	client    *asynq.Client
+	inspector *asynq.Inspector
 }
 
-func NewTask(client *asynq.Client) *Task {
+func NewTask(client *asynq.Client, inspector *asynq.Inspector) *Task {
 	return &Task{
-		client: client,
+		client:    client,
+		inspector: inspector,
 	}
 }
 
@@ -52,6 +54,27 @@ func (t *Task) NewSendSMSTask(userID uuid.UUID, fireAt time.Time, taskID string)
 	}
 
 	return info, err
+}
+
+func (t *Task) cancelSendSMSTask(taskID string) error {
+	if err := t.inspector.DeleteTask("default", taskID); err != nil {
+		return fmt.Errorf("delete scheduled sms task: %w", err)
+	}
+
+	return nil
+}
+
+func (t *Task) updateSendSMSTask(userID uuid.UUID, newFireAt time.Time, taskID string) (*asynq.TaskInfo, error) {
+	if err := t.cancelSendSMSTask(taskID); err != nil {
+		return nil, fmt.Errorf("delete scheduled sms task: %w", err)
+	}
+
+	ti, err := t.NewSendSMSTask(userID, newFireAt, taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	return ti, nil
 }
 
 // ----------------------------------------------------------------------------------------------------------

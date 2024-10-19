@@ -54,13 +54,14 @@ func StopDB(c *docker.Container) {
 
 // ================================================================
 type Test struct {
-	DB         *sqlx.DB
-	TaskClient *asynq.Client
-	Log        *logger.Logger
-	CoreAPIs   CoreAPIs
-	Teardown   func()
-	t          *testing.T
-	V1         struct {
+	DB            *sqlx.DB
+	TaskClient    *asynq.Client
+	TaskInspector *asynq.Inspector
+	Log           *logger.Logger
+	CoreAPIs      CoreAPIs
+	Teardown      func()
+	t             *testing.T
+	V1            struct {
 		Auth *auth.Auth
 	}
 }
@@ -133,8 +134,10 @@ func NewTest(t *testing.T, c *docker.Container, rc *docker.Container) *Test {
 	var buf bytes.Buffer
 	log := logger.New(&buf, logger.LevelInfo, "TEST", func(context.Context) string { return web.GetTraceID(ctx) })
 
-	taskClient := asynq.NewClient(asynq.RedisClientOpt{Addr: rc.Host})
-	coreAPIs := newCoreAPIs(log, db, taskClient)
+	cOpt := asynq.RedisClientOpt{Addr: rc.Host}
+	taskClient := asynq.NewClient(cOpt)
+	taskInspector := asynq.NewInspector(cOpt)
+	coreAPIs := newCoreAPIs(log, db, taskClient, taskInspector)
 
 	t.Log("Ready for testing ...")
 
@@ -157,6 +160,7 @@ func NewTest(t *testing.T, c *docker.Container, rc *docker.Container) *Test {
 		t.Helper()
 		db.Close()
 		taskClient.Close()
+		taskInspector.Close()
 
 		fmt.Println("******************** LOGS ********************")
 		fmt.Print(buf.String())
@@ -164,12 +168,13 @@ func NewTest(t *testing.T, c *docker.Container, rc *docker.Container) *Test {
 	}
 
 	test := Test{
-		DB:         db,
-		TaskClient: taskClient,
-		Log:        log,
-		CoreAPIs:   coreAPIs,
-		Teardown:   teardown,
-		t:          t,
+		DB:            db,
+		TaskClient:    taskClient,
+		TaskInspector: taskInspector,
+		Log:           log,
+		CoreAPIs:      coreAPIs,
+		Teardown:      teardown,
+		t:             t,
 		V1: struct {
 			Auth *auth.Auth
 		}{
@@ -243,8 +248,8 @@ type CoreAPIs struct {
 	Agenda      *agenda.Core
 }
 
-func newCoreAPIs(log *logger.Logger, db *sqlx.DB, taskClient *asynq.Client) CoreAPIs {
-	aptTask := appointment.NewTask(taskClient)
+func newCoreAPIs(log *logger.Logger, db *sqlx.DB, taskClient *asynq.Client, taskInspector *asynq.Inspector) CoreAPIs {
+	aptTask := appointment.NewTask(taskClient, taskInspector)
 
 	usrCore := user.NewCore(log, userdb.NewStore(log, db))
 	bsnCore := business.NewCore(log, usrCore, businessdb.NewStore(log, db))
