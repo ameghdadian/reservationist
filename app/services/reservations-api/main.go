@@ -29,7 +29,7 @@ func main() {
 		if err := cmd.Main(build, all.Routes()); err != nil {
 			os.Exit(1)
 		}
-	case "tasks":
+	case "worker":
 		if err := cmd.InitTaskWorkers(build, tasks.Handlers()); err != nil {
 			os.Exit(1)
 		}

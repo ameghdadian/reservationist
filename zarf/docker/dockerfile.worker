@@ -1,0 +1,29 @@
+# Build the Go Binary.
+FROM golang:1.22.4 AS build_reservations-api
+ENV CGO_ENABLED=0
+ARG BUILD_REF
+ARG BUILD_ROUTE
+
+COPY . /service
+
+# Build the worker binary
+WORKDIR /service/app/services/reservations-api
+RUN go build -ldflags "-X main.main=${BUILD_REF} -X main.routes=${BUILD_ROUTE}" -o reservations-worker
+
+# Run the Go Binary in Alpine.
+FROM alpine:3.18
+ARG BUILD_DATE
+ARG BUILD_REF
+RUN addgroup -g 1000 -S reservations && \
+    adduser -u 1000 -h /service -G reservations -S reservations
+COPY --from=build_reservations-api --chown=reservations:reservations /service/app/services/reservations-api/reservations-worker /service/reservations-worker
+WORKDIR /service
+USER reservations
+CMD ["./reservations-worker"]
+
+LABEL org.opencontainers.image.created="${BUILD_DATE}}" \
+    org.opencontainers.image.title="reservations-worker" \
+    org.opencontainers.image.authors="Amir <amirthedevops@gmail.com>" \
+    org.opencontainers.image.source="RAND SOURCE" \
+    org.opencontainers.image.revision="${BUILD_REF}}" \
+    org.opencontainers.image.vendor="Amir"

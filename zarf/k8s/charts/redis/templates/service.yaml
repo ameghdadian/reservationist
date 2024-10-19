@@ -4,6 +4,7 @@ metadata:
   name: redis
   labels:
     app: redis
+  namespace: {{ .Values.namespace }}
 spec:
   ports:
     - port: 6379

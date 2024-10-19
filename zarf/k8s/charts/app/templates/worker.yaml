@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deployments.name" . }}-worker
+  namespace: {{ include "deployments.name" . }}-system
+# Replicaset Spec
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: {{ include "deployments.name" . }}
+  
+  # Pod Spec
+  template:
+    metadata:
+      labels:
+        app: {{ include "deployments.name" . }}
+    
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      terminateGracePeriodSeconds: 60
+
+      containers:
+        - name: {{ include "deployments.name" . }}-worker
+          image: {{ printf "ameghdadian/service/%s-worker:%s" (include "deployments.name" .) .Values.version }}
+
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+            limits:
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+
+          env:
+          - name: GOMAXPROCS
+            valueFrom:
+              resourceFieldRef:
+                resource: limits.cpu

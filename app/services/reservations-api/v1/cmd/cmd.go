@@ -80,7 +80,7 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 			DisableTLS   bool   `conf:"default:true"`
 		}
 		Redis struct {
-			Addr string `conf:"default:0.0.0.0:6379"`
+			Addr string `conf:"default:redis.reservations-system.svc.cluster.local:6379"`
 		}
 		Auth struct {
 			KeysFolder string `conf:"default:zarf/keys/"`
@@ -288,7 +288,7 @@ func initWorkers(ctx context.Context, log *logger.Logger, build string, taskRout
 			DisableTLS   bool   `conf:"default:true"`
 		}
 		Redis struct {
-			Addr string `conf:"default:0.0.0.0:6379"`
+			Addr string `conf:"default:redis.reservations-system.svc.cluster.local:6379"`
 		}
 	}{
 		Version: conf.Version{
