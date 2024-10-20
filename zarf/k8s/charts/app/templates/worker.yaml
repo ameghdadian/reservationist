@@ -11,13 +11,13 @@ spec:
 
   selector:
     matchLabels:
-      app: {{ include "deployments.name" . }}
+      app: {{ include "deployments.name" . }}-worker
   
   # Pod Spec
   template:
     metadata:
       labels:
-        app: {{ include "deployments.name" . }}
+        app: {{ include "deployments.name" . }}-worker
     
     spec:
       dnsPolicy: ClusterFirstWithHostNet

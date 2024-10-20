@@ -144,6 +144,9 @@ dev-update-apply: all dev-load dev-apply
 dev-logs:
 	kubectl logs --namespace=$(NAMESPACE) -lapp=$(APP) --all-containers=true -f --tail 100 --max-log-requests=6 | go run app/tooling/logfmt/main.go -service=$(SERVICE_NAME)
 
+dev-logs-worker:
+	kubectl logs --namespace=$(NAMESPACE) -lapp=$(WORKER) --all-containers=true -f --tail 100 --max-log-requests=6 | go run app/tooling/logfmt/main.go -service=$(WORKER_NAME)
+
 dev-logs-db:
 	kubectl logs --namespace=$(NAMESPACE) -lapp=database --all-containers=true -f --tail=100
 

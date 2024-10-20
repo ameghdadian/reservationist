@@ -20,6 +20,7 @@ import (
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/ardanlabs/conf/v3"
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 )
 
@@ -245,10 +246,10 @@ func InitTaskWorkers(build string, taskRouter v1.TaskRouter) error {
 	}
 
 	traceIDFunc := func(ctx context.Context) string {
-		return web.GetTraceID(ctx)
+		return uuid.NewString()
 	}
 
-	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RESERVATIONS-API", traceIDFunc, events)
+	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RESERVATIONS-WORKER", traceIDFunc, events)
 
 	// -----------------------------------------------------------------------
 
@@ -351,6 +352,10 @@ func initWorkers(ctx context.Context, log *logger.Logger, build string, taskRout
 			BaseContext:     func() context.Context { return ctx },
 			Concurrency:     cfg.Worker.NumOfWorkers,
 			ShutdownTimeout: cfg.Worker.ShutdownTimeout,
+			Logger: logger.NewAsyncLogAdapter(
+				ctx,
+				logger.New(os.Stdout, logger.LevelDebug, "RESERVATIONS-WORKER", nil),
+			),
 		},
 	)
 
