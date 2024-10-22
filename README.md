@@ -1,8 +1,12 @@
 <div align="center">
     <h1>Reservationist</h1>
-    <a href="https://github.com/TheAlgorithms/Python/actions">
+    <a href="https://github.com/ameghdadian/reservationist/actions">
         <img src="https://img.shields.io/github/actions/workflow/status/ameghdadian/reservationist/github-actions.yaml?branch=main&label=CI&logo=github&style=flat-square" height="20" alt="GitHub Workflow Status">
   </a>
+    <a href="https://img.shields.io/coverallsCoverage/github/ameghdadian/reservationist">
+        <img src="https://img.shields.io/coverallsCoverage/github/ameghdadian/reservationist" height="20" alt="GitHub Workflow Status">
+  </a>
+
   <h3>A Restful API written in Go, confirming with DDD principles which you can use to book appointments</h3>
 </div>
 
