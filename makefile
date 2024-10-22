@@ -84,6 +84,9 @@ service:
 		--build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
 		.
 
+service-tar:
+	docker save -o $(APP).tar $(SERVICE_IMAGE)
+
 worker:
 	docker build \
 		-f zarf/docker/dockerfile.worker \
@@ -92,6 +95,9 @@ worker:
 		--build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
 		--build-arg BUILD_ROUTE=worker \
 		.
+
+worker-tar:
+	docker save -o $(WORKER).tar $(WORKER_IMAGE)
 
 # =============================================================================
 # Running from k8s
