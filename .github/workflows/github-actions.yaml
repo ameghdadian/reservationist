@@ -1,0 +1,75 @@
+on:
+    push: 
+        branches: 
+            main
+    pull_request:
+        branches: 
+            "*"
+
+jobs:
+    run-tests:
+        name: Run Tests
+        runs-on: ubuntu-latest
+        steps:
+            - name: Has Docker Installed?
+              run: which docker
+            
+            - name: What Binaries?
+              run: |
+                cd /usr/bin
+                ls
+
+            - name: Check out repository code
+              uses: actions/checkout@v4
+            
+            - name: List of files in root directory
+              run: ls ${{ github.workspace }}
+
+            - name: Setup Go environment
+              uses: actions/setup-go@v5.0.2
+              with:
+                go-version: '1.22.3'
+            
+            - name: Check Go Version
+              run: |
+                go version
+                go env
+            
+            - name: Run tests
+              run: make test-only
+
+    build-binaries:
+        name: Build Binaries
+        needs: [run-tests]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository code
+              uses: actions/checkout@v4
+            
+            - name: Compile and Save Binaries
+              run: |
+                make all
+                make service-tar
+                make worker-tar
+            
+            - name: Archive Binaries as Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                name: built_binaries
+                path: |
+                    reservations*.tar
+
+    inspect-binaries:
+        name: Inspect Binary Archives
+        needs: [build-binaries]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Download build-binaries' job Artifacts
+              uses: actions/download-artifact@v4
+              with: 
+                name: built_binaries
+            
+            - name: Listing files
+              run: |
+                ls
+        
