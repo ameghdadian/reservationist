@@ -1,10 +1,22 @@
 on:
     push: 
         branches: 
-            main
+          - main
+        paths: 
+          - './**'
+          - '!README.md'
+          - '!makefile'
+          - 'docs'
+          - '.gitignore'
     pull_request:
         branches: 
             "*"
+        paths: 
+          - './**'
+          - '!README.md'
+          - '!makefile'
+          - 'docs/**'
+          - '.gitignore'
 
 jobs:
     run-tests:
