@@ -14,7 +14,11 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("agenda is not found")
+	ErrNotFound       = errors.New("agenda is not found")
+	ErrOutOfRange     = errors.New("time is out of range")
+	ErrIntervalAbused = errors.New("interval is not respected")
+	ErrNoDailyAgenda  = errors.New("no daily agenda found")
+	ErrBusinessOff    = errors.New("business has no activity at given date")
 )
 
 type Storer interface {
@@ -23,6 +27,7 @@ type Storer interface {
 	UpdateGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]GeneralAgenda, error)
+	QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (GeneralAgenda, error)
 	QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error)
 	CountGeneralAgenda(ctx context.Context, filter GAQueryFilter) (int, error)
 
@@ -139,6 +144,15 @@ func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, ord
 	return agds, nil
 }
 
+func (c *Core) QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (GeneralAgenda, error) {
+	agd, err := c.storer.QueryGeneralAgendaByBusinessID(ctx, bsnID)
+	if err != nil {
+		return GeneralAgenda{}, fmt.Errorf("query: bsnID[%s]: %w", bsnID, err)
+	}
+
+	return agd, nil
+}
+
 func (c *Core) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error) {
 	agd, err := c.storer.QueryGeneralAgendaByID(ctx, agdID)
 	if err != nil {
@@ -150,6 +164,33 @@ func (c *Core) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (Gen
 
 func (c *Core) CountGeneralAgenda(ctx context.Context, filter GAQueryFilter) (int, error) {
 	return c.storer.CountGeneralAgenda(ctx, filter)
+}
+
+// ConformsGeneralAgendaBoundary checks two things:
+// 1. Whether check time is placed inside inclusive opening and closing business agenda,
+// 2. And if check time conforms with interval requirement.
+func (c *Core) ConformGeneralAgendaBoundary(ctx context.Context, bsnID uuid.UUID, checkTime time.Time) error {
+	agd, err := c.storer.QueryGeneralAgendaByBusinessID(ctx, bsnID)
+	if err != nil {
+		return fmt.Errorf("query: bsnID[%s]: %w", bsnID, err)
+	}
+
+	opens := agd.OpensAt.UTC().Hour()*3600 + agd.OpensAt.UTC().Minute()*60 + agd.OpensAt.UTC().Second()
+	closed := agd.ClosedAt.UTC().Hour()*3600 + agd.ClosedAt.UTC().Minute()*60 + agd.ClosedAt.UTC().Second()
+	check := checkTime.UTC().Hour()*3600 + checkTime.UTC().Minute()*60 + checkTime.UTC().Second()
+
+	if check < opens || check >= closed {
+		return ErrOutOfRange
+	}
+
+	workday := closed - opens
+	checkpoint := check - opens
+
+	if workday%checkpoint != 0 {
+		return ErrIntervalAbused
+	}
+
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------------
@@ -242,4 +283,50 @@ func (c *Core) QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (Daily
 	}
 
 	return agd, nil
+}
+
+// ConformsDailyAgendaBoundary checks two things:
+// 1. Whether check time is placed inside inclusive opening and closing business agenda,
+// 2. And if check time conforms with interval requirement.
+func (c *Core) ConformDailyAgendaBoundary(ctx context.Context, bsnID uuid.UUID, checkTime time.Time) error {
+	var filter DAQueryFilter
+	filter.WithBusinessID(bsnID)
+	filter.WithDate(checkTime.UTC().Format(time.DateOnly))
+
+	agds, err := c.storer.QueryDailyAgenda(ctx, filter, DefaultOrderBy, 1, 10)
+	if err != nil {
+		return err
+	}
+
+	if len(agds) == 0 {
+		return ErrNoDailyAgenda
+	}
+
+	err = ErrBusinessOff
+	for i := range agds {
+		if agds[i].Availability {
+
+			opens := agds[i].OpensAt.UTC().Hour()*3600 + agds[i].OpensAt.UTC().Minute()*60 + agds[i].OpensAt.UTC().Second()
+			closed := agds[i].ClosedAt.UTC().Hour()*3600 + agds[i].ClosedAt.UTC().Minute()*60 + agds[i].ClosedAt.UTC().Second()
+			check := checkTime.UTC().Hour()*3600 + checkTime.UTC().Minute()*60 + checkTime.UTC().Second()
+
+			if check >= opens || check < closed {
+
+				workingRange := closed - opens
+				checkpoint := check - opens
+
+				if workingRange%checkpoint != 0 {
+					err = ErrIntervalAbused
+					break
+				}
+
+				return nil
+			}
+
+			err = ErrOutOfRange
+		}
+
+	}
+
+	return err
 }

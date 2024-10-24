@@ -16,8 +16,8 @@ func TestGenerateNewGeneralAgendas(n int, bsnID uuid.UUID, userID uuid.UUID) ([]
 	for i := range n {
 		newGAgds[i] = NewGeneralAgenda{
 			BusinessID:  bsnID,
-			OpensAt:     time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, time.Local),
-			ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), 17, 0, 0, 0, time.Local),
+			OpensAt:     time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.Local),
+			ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+8, 0, 0, 0, time.Local),
 			Interval:    60 * 15, // 15 minutes
 			WorkingDays: []Day{{2}, {4}, {6}},
 		}
@@ -54,8 +54,8 @@ func TestGenerateNewDailyAgendas(n int, bsnID uuid.UUID, userID uuid.UUID) ([]Ne
 	for i := range n {
 		newDAgds[i] = NewDailyAgenda{
 			BusinessID:   bsnID,
-			OpensAt:      time.Date(then.Year(), then.Month(), then.Day(), 9, 0, 0, 0, time.Local),
-			ClosedAt:     time.Date(then.Year(), then.Month(), then.Day(), 12, 0, 0, 0, time.Local),
+			OpensAt:      time.Date(then.Year(), then.Month(), then.Day(), then.Hour(), 0, 0, 0, time.Local),
+			ClosedAt:     time.Date(then.Year(), then.Month(), then.Day(), then.Hour()+3, 0, 0, 0, time.Local),
 			Interval:     60 * 10, // 10 minutes
 			Date:         time.Date(then.Year(), then.Month(), then.Day(), 0, 0, 0, 0, time.Local),
 			Availability: true,

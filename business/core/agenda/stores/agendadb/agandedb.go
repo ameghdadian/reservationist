@@ -137,6 +137,38 @@ func (s *Store) QueryGeneralAgenda(ctx context.Context, filter agenda.GAQueryFil
 	return agds, nil
 }
 
+func (s *Store) QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (agenda.GeneralAgenda, error) {
+	data := struct {
+		BusinessID string `db:"business_id"`
+	}{
+		BusinessID: bsnID.String(),
+	}
+
+	const q = `
+	SELECT 	
+		id, business_id, opens_at, closed_at, interval, working_days, date_created, date_updated
+	FROM
+		general_agenda
+	WHERE
+		business_id = :business_id
+	`
+
+	var dbgAgd dbGeneralAgenda
+	if err := db.NamedQueryStruct(ctx, s.log, s.db, q, data, &dbgAgd); err != nil {
+		if errors.Is(err, db.ErrDBNotFound) {
+			return agenda.GeneralAgenda{}, fmt.Errorf("namedquerystruct: %w", agenda.ErrNotFound)
+		}
+		return agenda.GeneralAgenda{}, fmt.Errorf("namedquerystruct: %w", err)
+	}
+
+	agd, err := toCoreGeneralAgenda(dbgAgd)
+	if err != nil {
+		return agenda.GeneralAgenda{}, err
+	}
+
+	return agd, nil
+}
+
 func (s *Store) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (agenda.GeneralAgenda, error) {
 	data := struct {
 		AgendaID string `db:"agenda_id"`
@@ -286,6 +318,7 @@ func (s *Store) QueryDailyAgenda(ctx context.Context, filter agenda.DAQueryFilte
 	return agds, nil
 
 }
+
 func (s *Store) CountDailyAgenda(ctx context.Context, filter agenda.DAQueryFilter) (int, error) {
 	data := map[string]any{}
 

@@ -55,6 +55,11 @@ func (s *Store) applyFilterDailyAgenda(filter agenda.DAQueryFilter, data map[str
 		wc = append(wc, "applicable_date >= :now AND applicable_date < :then")
 	}
 
+	if filter.ID == nil && filter.Date == nil && filter.From == nil && filter.To == nil && filter.Days == nil {
+		data["now"] = time.Now().UTC().Format(time.DateOnly)
+		wc = append(wc, "applicable_date >= :now")
+	}
+
 	if len(wc) > 0 {
 		buf.WriteString(" WHERE ")
 		buf.Write([]byte(strings.Join(wc, " AND ")))

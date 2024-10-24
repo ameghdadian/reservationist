@@ -90,6 +90,10 @@ func toCoreNewGeneralAgenda(app AppNewGeneralAgenda) (agenda.NewGeneralAgenda, e
 		return agenda.NewGeneralAgenda{}, fmt.Errorf("parsing closed at: %w", err)
 	}
 
+	if opn.Format(time.DateOnly) != cld.Format(time.DateOnly) {
+		return agenda.NewGeneralAgenda{}, errors.New("opening and closing hour can not be in two separate days")
+	}
+
 	if cld.Before(opn) {
 		return agenda.NewGeneralAgenda{}, errors.New("Closed at time should be after Opens at time.")
 	}
@@ -136,6 +140,10 @@ func toCoreUpdateGeneralAgenda(app AppUpdateGeneralAgenda) (agenda.UpdateGeneral
 			return agenda.UpdateGeneralAgenda{}, fmt.Errorf("parsing closed at: %w", err)
 		}
 		cld = TimePointer(c)
+	}
+
+	if opn.Format(time.DateOnly) != cld.Format(time.DateOnly) {
+		return agenda.UpdateGeneralAgenda{}, errors.New("opening and closing hour can not be in two separate days")
 	}
 
 	var days []agenda.Day
@@ -200,9 +208,9 @@ func toAppDailyAgendaSlice(agds []agenda.DailyAgenda) []AppDailyAgenda {
 
 type AppNewDailyAgenda struct {
 	BusinessID   string `json:"business_id" validate:"required,uuid"`
-	OpensAt      string `json:"opens_at" validate:"required_with=ClosedAt"`
-	ClosedAt     string `json:"closed_at" validate:"required_with=OpensAt"`
-	Interval     int    `json:"interval" validate:"gt=0,lte=86400"`
+	OpensAt      string `json:"opens_at" validate:"required_if=Availability true"`
+	ClosedAt     string `json:"closed_at" validate:"required_if=Availability true"`
+	Interval     int    `json:"interval" validate:"gt=0,lte=86400,required_if=Availability true"`
 	Date         string `json:"date" validate:"required"`
 	Availability bool   `json:"availability" validate:"required"`
 }
@@ -237,6 +245,10 @@ func toCoreNewDailyAgenda(app AppNewDailyAgenda) (agenda.NewDailyAgenda, error) 
 
 	if cld.Before(opn) {
 		return agenda.NewDailyAgenda{}, errors.New("closed at time should be after Opens at time")
+	}
+
+	if opn.Format(time.DateOnly) != cld.Format(time.DateOnly) {
+		return agenda.NewDailyAgenda{}, errors.New("opening and closing hour can not be in two separate days")
 	}
 
 	return agenda.NewDailyAgenda{
@@ -275,6 +287,10 @@ func toCoreUpdateDailyAgenda(app AppUpdateDailyAgenda) (agenda.UpdateDailyAgenda
 			return agenda.UpdateDailyAgenda{}, fmt.Errorf("parsing closed at: %w", err)
 		}
 		cld = TimePointer(c)
+	}
+
+	if opn.Format(time.DateOnly) != cld.Format(time.DateOnly) {
+		return agenda.UpdateDailyAgenda{}, errors.New("opening and closing hour can not be in two separate days")
 	}
 
 	var date *time.Time

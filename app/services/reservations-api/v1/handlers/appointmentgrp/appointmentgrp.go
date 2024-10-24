@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ameghdadian/service/business/core/agenda"
 	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
@@ -20,11 +21,13 @@ var (
 
 type Handlers struct {
 	aptCore *appointment.Core
+	agdCore *agenda.Core
 }
 
-func New(aptCore *appointment.Core) *Handlers {
+func New(aptCore *appointment.Core, agdCore *agenda.Core) *Handlers {
 	return &Handlers{
 		aptCore: aptCore,
+		agdCore: agdCore,
 	}
 }
 
@@ -34,9 +37,14 @@ func (h *Handlers) executeUnderTransaction(ctx context.Context) (*Handlers, erro
 		if err != nil {
 			return nil, err
 		}
+		agdCore, err := h.agdCore.ExecuteUnderTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 
 		h = &Handlers{
 			aptCore: aptCore,
+			agdCore: agdCore,
 		}
 
 		return h, nil
@@ -59,6 +67,17 @@ func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Re
 	na, err := toCoreNewAppointment(app)
 	if err != nil {
 		return response.NewError(err, http.StatusBadRequest)
+	}
+
+	err = h.agdCore.ConformDailyAgendaBoundary(ctx, na.BusinessID, na.ScheduledOn)
+	if err != nil {
+		if errors.Is(err, agenda.ErrNoDailyAgenda) {
+			if err = h.agdCore.ConformGeneralAgendaBoundary(ctx, na.BusinessID, na.ScheduledOn); err != nil {
+				return response.NewError(err, http.StatusBadRequest)
+			}
+		} else {
+			return response.NewError(err, http.StatusBadRequest)
+		}
 	}
 
 	apt, err := h.aptCore.Create(ctx, na)

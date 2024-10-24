@@ -47,7 +47,7 @@ func Routes(app *web.App, cfg Config) {
 	// Daily Agenda Handlers
 	app.Handle(http.MethodPost, version, "/agendas/daily", hdl.CreateDailyAgenda, authen, tran)
 	app.Handle(http.MethodPut, version, "/agendas/daily/{agenda_id}", hdl.UpdateDailyAgenda, authen, tran, ruleAuthorizedDaiAgenda)
-	app.Handle(http.MethodDelete, version, "/agendas/daily/{agenda_id}", hdl.DeleteGeneralAgenda, authen, tran, ruleAuthorizedDaiAgenda)
+	app.Handle(http.MethodDelete, version, "/agendas/daily/{agenda_id}", hdl.DeleteDailyAgenda, authen, tran, ruleAuthorizedDaiAgenda)
 	app.Handle(http.MethodGet, version, "/agendas/daily", hdl.QueryDailyAgenda, authen)
 	app.Handle(http.MethodGet, version, "/agendas/daily/{agenda_id}", hdl.QueryDailyAgendaByID, authen)
 }

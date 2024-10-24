@@ -19,6 +19,7 @@ var (
 	ErrUserDisabled     = errors.New("user disabled")
 	ErrPastTime         = errors.New("time past now")
 	ErrAlreadyCancelled = errors.New("appointment already cancelled")
+	ErrAlreadyReserved  = errors.New("given time is already reserverd")
 )
 
 type Storer interface {
@@ -95,6 +96,20 @@ func (c *Core) Create(ctx context.Context, na NewAppointment) (Appointment, erro
 
 	if na.ScheduledOn.UTC().Before(time.Now().UTC()) {
 		return Appointment{}, ErrPastTime
+	}
+
+	var filter QueryFilter
+	filter.WithScheduledOn(na.ScheduledOn.UTC())
+	filter.WithBusinessID(na.BusinessID)
+	agds, err := c.storer.Query(ctx, filter, DefaultOrderBy, 1, 1)
+	if err != nil {
+		return Appointment{}, fmt.Errorf("query: %w", err)
+	}
+	if len(agds) == 1 {
+		return Appointment{}, ErrAlreadyReserved
+	}
+	if len(agds) > 1 {
+		return Appointment{}, fmt.Errorf("found unexpected number of entires(gt. 1)")
 	}
 
 	now := time.Now()

@@ -456,7 +456,7 @@ func (wt *WebTests) createBusiness200(sd seedData) func(t *testing.T) {
 }
 
 func (wt *WebTests) createAppointment200(sd seedData) func(t *testing.T) {
-	inTwoHrs := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
+	inTwoHrs := sd.generalAgendas[0].OpensAt.Add(2 * time.Hour).UTC().Format(time.RFC3339)
 
 	return func(t *testing.T) {
 		table := []struct {

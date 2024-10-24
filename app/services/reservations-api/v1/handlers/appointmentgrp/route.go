@@ -3,6 +3,8 @@ package appointmentgrp
 import (
 	"net/http"
 
+	"github.com/ameghdadian/service/business/core/agenda"
+	"github.com/ameghdadian/service/business/core/agenda/stores/agendadb"
 	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/core/appointment/stores/appointmentdb"
 	"github.com/ameghdadian/service/business/core/business"
@@ -35,13 +37,14 @@ func Routes(app *web.App, cfg Config) {
 	usrCore := user.NewCore(cfg.Log, userdb.NewStore(cfg.Log, cfg.DB))
 	bsnCore := business.NewCore(cfg.Log, usrCore, businessdb.NewStore(cfg.Log, cfg.DB))
 	aptCore := appointment.NewCore(cfg.Log, usrCore, bsnCore, appointmentdb.NewStore(cfg.Log, cfg.DB), aptTask)
+	agdCore := agenda.NewCore(cfg.Log, bsnCore, agendadb.NewStore(cfg.Log, cfg.DB))
 
 	authen := mid.Authenticate(cfg.Auth)
 	ruleAdminOnly := mid.Authorize(cfg.Auth, auth.RuleAdminOnly)
 	ruleAuthorizeAppointment := mid.AuthorizeAppointment(cfg.Log, cfg.Auth, aptCore)
 	tran := mid.ExecuteInTransaction(cfg.Log, db.NewBeginner(cfg.DB))
 
-	hdl := New(aptCore)
+	hdl := New(aptCore, agdCore)
 	app.Handle(http.MethodGet, version, "/appointments", hdl.Query, authen, ruleAdminOnly)
 	app.Handle(http.MethodGet, version, "/appointments/{appointment_id}", hdl.QueryByID, authen, ruleAuthorizeAppointment)
 	app.Handle(http.MethodPost, version, "/appointments", hdl.Create, authen, tran)
