@@ -9,6 +9,7 @@ import (
 	"github.com/ameghdadian/service/business/core/agenda"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
+	"github.com/ameghdadian/service/business/web/v1/mid"
 	"github.com/ameghdadian/service/business/web/v1/response"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/google/uuid"
@@ -83,7 +84,7 @@ func (h *Handlers) UpdateGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryGeneralAgendaByID(ctx, gAgdID)
+	agd, err := mid.GetGeneralAgenda(ctx)
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):
@@ -117,7 +118,7 @@ func (h *Handlers) DeleteGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryGeneralAgendaByID(ctx, agdID)
+	agd, err := mid.GetGeneralAgenda(ctx)
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):
@@ -220,7 +221,7 @@ func (h *Handlers) UpdateDailyAgenda(ctx context.Context, w http.ResponseWriter,
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryDailyAgendaByID(ctx, gAgdID)
+	agd, err := mid.GetDailyAgenda(ctx)
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):
@@ -254,7 +255,7 @@ func (h *Handlers) DeleteDailyAgenda(ctx context.Context, w http.ResponseWriter,
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	agd, err := h.agdCore.QueryDailyAgendaByID(ctx, agdID)
+	agd, err := mid.GetDailyAgenda(ctx)
 	if err != nil {
 		switch {
 		case errors.Is(err, agenda.ErrNotFound):

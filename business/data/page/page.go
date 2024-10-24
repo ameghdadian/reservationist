@@ -1,10 +1,15 @@
 package page
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/ameghdadian/service/foundation/validate"
+)
+
+const (
+	maxRowsPerPage = 100
 )
 
 type Page struct {
@@ -30,6 +35,12 @@ func Parse(r *http.Request) (Page, error) {
 		rowsPerPage, err = strconv.Atoi(rows)
 		if err != nil {
 			return Page{}, validate.NewFieldsError("rows", err)
+		}
+		if rowsPerPage > maxRowsPerPage {
+			return Page{}, validate.NewFieldsError(
+				"rows",
+				fmt.Errorf("rows per page exceeded the limit: GOT: %d, MAX: %d", rowsPerPage, maxRowsPerPage),
+			)
 		}
 	}
 

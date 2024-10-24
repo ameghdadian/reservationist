@@ -133,7 +133,8 @@ dev-apply:
 
 	helm upgrade --install reservationist zarf/k8s/charts/app \
 		-f zarf/k8s/charts/app/values.app.yaml \
-		--set version=$(VERSION)
+		--set app.version=$(VERSION) \
+		--set worker.version=$(VERSION)
 # --kubeconfig zarf/k8s/.kubeconfig.yaml
 	kubectl wait --timeout=120s --namespace=$(NAMESPACE) --for=condition=Ready pods -lapp=$(APP)
 

@@ -99,7 +99,7 @@ func AuthorizeBusiness(log *logger.Logger, ath *auth.Auth, bsnCore *business.Cor
 				}
 
 				userID = bsn.OwnerID
-				setBusiness(ctx, bsn)
+				ctx = setBusiness(ctx, bsn)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -142,7 +142,7 @@ func AuthorizeAppointment(log *logger.Logger, ath *auth.Auth, aptCore *appointme
 				}
 
 				userID = apt.UserID
-				setAppointment(ctx, apt)
+				ctx = setAppointment(ctx, apt)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -193,8 +193,8 @@ func AuthorizeGeneralAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.
 				}
 
 				userID = bsn.OwnerID
-				setGeneralAgenda(ctx, agd)
-				setBusiness(ctx, bsn)
+				ctx = setGeneralAgenda(ctx, agd)
+				ctx = setBusiness(ctx, bsn)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -245,8 +245,8 @@ func AuthorizeDailyAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.Co
 				}
 
 				userID = bsn.OwnerID
-				setDailyAgenda(ctx, agd)
-				setBusiness(ctx, bsn)
+				ctx = setDailyAgenda(ctx, agd)
+				ctx = setBusiness(ctx, bsn)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)

@@ -16,9 +16,9 @@ type AppUser struct {
 	Roles        []string `json:"roles"`
 	PasswordHash []byte   `json:"-"`
 	Enabled      bool     `json:"enabled"`
-	PhoneNo      string   `json:"phoneNumber"`
-	DateCreated  string   `json:"dateCreated"`
-	DateUpdated  string   `json:"dateUpdated"`
+	PhoneNo      string   `json:"phone_number"`
+	DateCreated  string   `json:"-"`
+	DateUpdated  string   `json:"-"`
 }
 
 func toAppUser(usr user.User) AppUser {
@@ -55,9 +55,9 @@ type AppNewUser struct {
 	Name            string   `json:"name" validate:"required"`
 	Email           string   `json:"email" validate:"required,email"`
 	Roles           []string `json:"roles" validate:"required"`
-	PhoneNo         string   `json:"phoneNumber" validate:"required"`
+	PhoneNo         string   `json:"phone_number" validate:"required"`
 	Password        string   `json:"password" validate:"required"`
-	PasswordConfirm string   `json:"passwordConfirm" validate:"eqfield=Password"`
+	PasswordConfirm string   `json:"password_confirm" validate:"eqfield=Password"`
 }
 
 func (app AppNewUser) Validate() error {
@@ -106,7 +106,7 @@ type AppUpdateUser struct {
 	Email           *string  `json:"email" validate:"omitempty,email"`
 	Roles           []string `json:"roles"`
 	Password        *string  `json:"password"`
-	PasswordConfirm *string  `json:"passwordConfirm" validate:"omitempty,eqfield=Password"`
+	PasswordConfirm *string  `json:"password_confirm" validate:"omitempty,eqfield=Password"`
 	Enabled         *bool    `json:"enabled"`
 }
 

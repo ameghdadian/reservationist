@@ -100,7 +100,7 @@ func (t *TaskHandlers) HandleSendSMS(ctx context.Context, tsk *asynq.Task) error
 	// Query user domain using core objects in TaskHandlers
 
 	// Simulate sending an early notification(reminder) to user
-	t.log.Info(ctx, "sending reminder to userID[%s] at[%s]", s.UserID)
+	t.log.Info(ctx, "sending reminder", "to userID[%s]", s.UserID)
 
 	return nil
 }

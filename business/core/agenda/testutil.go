@@ -3,6 +3,7 @@ package agenda
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,11 +14,12 @@ func TestGenerateNewGeneralAgendas(n int, bsnID uuid.UUID, userID uuid.UUID) ([]
 
 	now := time.Now()
 
+	diff := int(math.Min(float64(24-now.Hour()), 2))
 	for i := range n {
 		newGAgds[i] = NewGeneralAgenda{
 			BusinessID:  bsnID,
 			OpensAt:     time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.Local),
-			ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+8, 0, 0, 0, time.Local),
+			ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+diff, 0, 0, 0, time.Local),
 			Interval:    60 * 15, // 15 minutes
 			WorkingDays: []Day{{2}, {4}, {6}},
 		}
@@ -51,11 +53,12 @@ func TestGenerateNewDailyAgendas(n int, bsnID uuid.UUID, userID uuid.UUID) ([]Ne
 
 	then := time.Now().AddDate(0, 0, 2)
 
+	diff := int(math.Min(float64(24-then.Hour()), 2))
 	for i := range n {
 		newDAgds[i] = NewDailyAgenda{
 			BusinessID:   bsnID,
 			OpensAt:      time.Date(then.Year(), then.Month(), then.Day(), then.Hour(), 0, 0, 0, time.Local),
-			ClosedAt:     time.Date(then.Year(), then.Month(), then.Day(), then.Hour()+3, 0, 0, 0, time.Local),
+			ClosedAt:     time.Date(then.Year(), then.Month(), then.Day(), then.Hour()+diff, 0, 0, 0, time.Local),
 			Interval:     60 * 10, // 10 minutes
 			Date:         time.Date(then.Year(), then.Month(), then.Day(), 0, 0, 0, 0, time.Local),
 			Availability: true,

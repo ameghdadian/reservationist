@@ -6,7 +6,7 @@ type PageDocument[T any] struct {
 	Items       []T `json:"items"`
 	Total       int `json:"total"`
 	Page        int `json:"page"`
-	RowsPerPage int `json:"rowsPerPage"`
+	RowsPerPage int `json:"rows_per_page"`
 }
 
 func NewPageDocument[T any](items []T, total int, page int, rowsPerPage int) PageDocument[T] {

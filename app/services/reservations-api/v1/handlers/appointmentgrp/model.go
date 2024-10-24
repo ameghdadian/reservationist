@@ -15,8 +15,8 @@ type AppAppointment struct {
 	UserID      string `json:"user_id"`
 	Status      string `json:"string"`
 	ScheduledOn string `json:"scheduled_on"`
-	DateCreated string `json:"dateCreated"`
-	DateUpdated string `json:"dateUpdated"`
+	DateCreated string `json:"-"`
+	DateUpdated string `json:"-"`
 }
 
 func toAppAppointment(apt appointment.Appointment) AppAppointment {
@@ -95,9 +95,13 @@ type AppUpdateAppointment struct {
 	ScheduledOn *string `json:"scheduled_on" validate:"omitempty,datetime"`
 }
 
-// func (app AppUpdateAppointment) Validate() error {
+func (app AppUpdateAppointment) Validate() error {
+	if err := validate.Check(app); err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
 
-// }
+	return nil
+}
 
 func toCoreUpdateAppointment(app AppUpdateAppointment) (appointment.UpdateAppointment, error) {
 	var status appointment.Status

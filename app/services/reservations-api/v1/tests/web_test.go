@@ -456,7 +456,7 @@ func (wt *WebTests) createBusiness200(sd seedData) func(t *testing.T) {
 }
 
 func (wt *WebTests) createAppointment200(sd seedData) func(t *testing.T) {
-	inTwoHrs := sd.generalAgendas[0].OpensAt.Add(2 * time.Hour).UTC().Format(time.RFC3339)
+	sch := sd.generalAgendas[0].OpensAt.Add(1 * time.Hour).UTC().Format(time.RFC3339)
 
 	return func(t *testing.T) {
 		table := []struct {
@@ -473,14 +473,14 @@ func (wt *WebTests) createAppointment200(sd seedData) func(t *testing.T) {
 					BusinessID:  sd.businesses[0].ID.String(),
 					UserID:      sd.users[0].ID.String(),
 					Status:      appointment.StatusScheduled.Status(),
-					ScheduledOn: inTwoHrs,
+					ScheduledOn: sch,
 				},
 				resp: &appointmentgrp.AppAppointment{},
 				expResp: &appointmentgrp.AppAppointment{
 					BusinessID:  sd.businesses[0].ID.String(),
 					UserID:      sd.users[0].ID.String(),
 					Status:      appointment.StatusScheduled.Status(),
-					ScheduledOn: inTwoHrs,
+					ScheduledOn: sch,
 				},
 			},
 		}

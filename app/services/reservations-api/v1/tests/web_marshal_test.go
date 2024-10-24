@@ -27,8 +27,8 @@ func toAppUser(usr user.User) usergrp.AppUser {
 		PasswordHash: nil, // This field is not marshalled.
 		PhoneNo:      usr.PhoneNo.Number(),
 		Enabled:      usr.Enabled,
-		DateCreated:  usr.DateCreated.Format(time.RFC3339),
-		DateUpdated:  usr.DateUpdated.Format(time.RFC3339),
+		DateCreated:  "",
+		DateUpdated:  "",
 	}
 }
 
@@ -54,8 +54,8 @@ func toAppBusiness(b business.Business) businessgrp.AppBusiness {
 		OwnerID:     b.OwnerID.String(),
 		Name:        b.Name,
 		Description: b.Desc,
-		DateCreated: b.DateCreated.Format(time.RFC3339),
-		DateUpdated: b.DateUpdated.Format(time.RFC3339),
+		DateCreated: "",
+		DateUpdated: "",
 	}
 }
 
@@ -82,8 +82,8 @@ func toAppAppointment(apt appointment.Appointment) appointmentgrp.AppAppointment
 		UserID:      apt.UserID.String(),
 		Status:      apt.Status.Status(),
 		ScheduledOn: apt.ScheduledOn.Format(time.RFC3339),
-		DateCreated: apt.DateCreated.Format(time.RFC3339),
-		DateUpdated: apt.DateUpdated.Format(time.RFC3339),
+		DateCreated: "",
+		DateUpdated: "",
 	}
 }
 
@@ -116,8 +116,8 @@ func toAppGeneralAgenda(agd agenda.GeneralAgenda) agendagrp.AppGeneralAgenda {
 		ClosedAt:    agd.ClosedAt.Format(time.RFC3339),
 		Interval:    int(agd.Interval),
 		WorkingDays: days,
-		DateCreated: agd.DateCreated.Format(time.RFC3339),
-		DateUpdated: agd.DateUpdated.Format(time.RFC3339),
+		DateCreated: "",
+		DateUpdated: "",
 	}
 }
 
@@ -144,8 +144,8 @@ func toAppDailyAgenda(agd agenda.DailyAgenda) agendagrp.AppDailyAgenda {
 		Interval:     int(time.Duration(agd.Interval)),
 		Date:         agd.Date.Format(time.DateOnly),
 		Availability: agd.Availability,
-		DateCreated:  agd.DateCreated.Format(time.RFC3339),
-		DateUpdated:  agd.DateUpdated.Format(time.RFC3339),
+		DateCreated:  "",
+		DateUpdated:  "",
 	}
 }
 

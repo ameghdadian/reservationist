@@ -10,6 +10,7 @@ import (
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
+	"github.com/ameghdadian/service/business/web/v1/mid"
 	"github.com/ameghdadian/service/business/web/v1/response"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/google/uuid"
@@ -94,7 +95,7 @@ func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	b, err := h.bsnCore.QueryByID(ctx, bsnId)
+	b, err := mid.GetBusiness(ctx)
 	if err != nil {
 		switch {
 		case errors.Is(err, business.ErrNotFound):
@@ -123,7 +124,7 @@ func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
-	b, err := h.bsnCore.QueryByID(ctx, bsnID)
+	b, err := mid.GetBusiness(ctx)
 	if err != nil {
 		switch {
 		case errors.Is(err, business.ErrNotFound):

@@ -11,11 +11,11 @@ import (
 
 type AppBusiness struct {
 	ID          string `json:"id"`
-	OwnerID     string `json:"ownerID"`
+	OwnerID     string `json:"owner_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	DateCreated string `json:"dateCreated"`
-	DateUpdated string `json:"dateUpdated"`
+	DateCreated string `json:"-"`
+	DateUpdated string `json:"-"`
 }
 
 func toAppBusiness(b business.Business) AppBusiness {
@@ -41,7 +41,7 @@ func toAppBusinesses(bsns []business.Business) []AppBusiness {
 // ======================================================================
 
 type AppNewBusiness struct {
-	OwnerID     string `json:"ownerID" validate:"required"`
+	OwnerID     string `json:"owner_id" validate:"required"`
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description" validate:"required,max=140"`
 }
