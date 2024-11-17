@@ -74,11 +74,8 @@ func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error
 }
 
 func (c *Core) CreateGeneralAgenda(ctx context.Context, na NewGeneralAgenda) (GeneralAgenda, error) {
-	// TODO: Create an AuthorizeGeneralAgenda middleware to check only users who own a business can create agenda plan for it.
-
 	_, err := c.bsnCore.QueryByID(ctx, na.BusinessID)
 	if err != nil {
-		// TODO: DOUBLE Check this!! We don't want this end up being 500 error!
 		return GeneralAgenda{}, fmt.Errorf("busineess.querybyid: %s: %w", na.BusinessID, err)
 	}
 

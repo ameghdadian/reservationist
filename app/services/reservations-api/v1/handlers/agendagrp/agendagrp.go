@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ameghdadian/service/business/core/agenda"
+	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/business/web/v1/mid"
@@ -62,7 +63,12 @@ func (h *Handlers) CreateGeneralAgenda(ctx context.Context, w http.ResponseWrite
 
 	gAgd, err := h.agdCore.CreateGeneralAgenda(ctx, nAgd)
 	if err != nil {
-		return fmt.Errorf("create general agenda: app[%+v]: %w", app, err)
+		switch {
+		case errors.Is(err, business.ErrNotFound):
+			return response.NewError(err, http.StatusNotFound)
+		default:
+			return fmt.Errorf("create general agenda: app[%+v]: %w", app, err)
+		}
 	}
 
 	return web.Respond(ctx, w, toAppGeneralAgenda(gAgd), http.StatusCreated)
