@@ -180,10 +180,10 @@ func (c *Core) ConformGeneralAgendaBoundary(ctx context.Context, bsnID uuid.UUID
 		return ErrOutOfRange
 	}
 
-	workday := closed - opens
+	interval := agd.Interval
 	checkpoint := check - opens
 
-	if workday%checkpoint != 0 {
+	if checkpoint%interval != 0 {
 		return ErrIntervalAbused
 	}
 
@@ -309,10 +309,10 @@ func (c *Core) ConformDailyAgendaBoundary(ctx context.Context, bsnID uuid.UUID, 
 
 			if check >= opens || check < closed {
 
-				workingRange := closed - opens
+				interval := agds[i].Interval
 				checkpoint := check - opens
 
-				if workingRange%checkpoint != 0 {
+				if checkpoint%interval != 0 {
 					err = ErrIntervalAbused
 					break
 				}
