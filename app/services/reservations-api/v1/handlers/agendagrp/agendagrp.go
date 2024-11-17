@@ -86,12 +86,7 @@ func (h *Handlers) UpdateGeneralAgenda(ctx context.Context, w http.ResponseWrite
 
 	agd, err := mid.GetGeneralAgenda(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, agenda.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: generalAgendaID[%s]: %w", gAgdID, err)
-		}
+		return fmt.Errorf("general agenda missing in context: %w", err)
 	}
 
 	uAgd, err := toCoreUpdateGeneralAgenda(app)
@@ -120,12 +115,7 @@ func (h *Handlers) DeleteGeneralAgenda(ctx context.Context, w http.ResponseWrite
 
 	agd, err := mid.GetGeneralAgenda(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, agenda.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: generalAgendaID[%s]: %w", agdID, err)
-		}
+		return fmt.Errorf("general agenda missing in context: %w", err)
 	}
 
 	if err := h.agdCore.DeleteGeneralAgenda(ctx, agd); err != nil {
@@ -223,12 +213,7 @@ func (h *Handlers) UpdateDailyAgenda(ctx context.Context, w http.ResponseWriter,
 
 	agd, err := mid.GetDailyAgenda(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, agenda.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: dailyAgendaID[%s]: %w", gAgdID, err)
-		}
+		return fmt.Errorf("daily agenda missing in context: %w", err)
 	}
 
 	uAgd, err := toCoreUpdateDailyAgenda(app)
@@ -257,12 +242,7 @@ func (h *Handlers) DeleteDailyAgenda(ctx context.Context, w http.ResponseWriter,
 
 	agd, err := mid.GetDailyAgenda(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, agenda.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: dailyAgendaID[%s]: %w", agdID, err)
-		}
+		return fmt.Errorf("daily agenda missing in context: %w", err)
 	}
 
 	if err := h.agdCore.DeleteDailyAgenda(ctx, agd); err != nil {

@@ -107,12 +107,7 @@ func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	apt, err := mid.GetAppointment(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, appointment.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: appointmentid[%s]: %w", aptID, err)
-		}
+		return fmt.Errorf("appointment missing in context: %w", err)
 	}
 
 	uapt, err := toCoreUpdateAppointment(app)
@@ -141,12 +136,7 @@ func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	apt, err := mid.GetAppointment(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, appointment.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: appointmentid[%s]: %w", aptID, err)
-		}
+		return fmt.Errorf("appointment missing in context: %w", err)
 	}
 
 	if err := h.aptCore.Delete(ctx, apt); err != nil {
@@ -187,19 +177,14 @@ func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func (h *Handlers) QueryByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	aptID, err := uuid.Parse(web.Param(r, "appointment_id"))
+	_, err := uuid.Parse(web.Param(r, "appointment_id"))
 	if err != nil {
 		return response.NewError(ErrInvalidID, http.StatusBadRequest)
 	}
 
 	apt, err := mid.GetAppointment(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, appointment.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: appointmentid[%s]: %w", aptID, err)
-		}
+		return fmt.Errorf("appointment missing in context: %w", err)
 	}
 
 	return web.Respond(ctx, w, toAppAppointment(apt), http.StatusOK)

@@ -97,12 +97,7 @@ func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	b, err := mid.GetBusiness(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, business.ErrNotFound):
-			return response.NewError(err, http.StatusNotFound)
-		default:
-			return fmt.Errorf("querybyid: businessID[%s]: %w", bsnId, err)
-		}
+		return fmt.Errorf("business missing in context: %w", err)
 	}
 
 	b, err = h.bsnCore.Update(ctx, b, toCoreUpdateBusiness(app))
@@ -126,12 +121,7 @@ func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	b, err := mid.GetBusiness(ctx)
 	if err != nil {
-		switch {
-		case errors.Is(err, business.ErrNotFound):
-			return response.NewError(err, http.StatusNoContent)
-		default:
-			return fmt.Errorf("querybyid: businessID[%s]: %w", bsnID, err)
-		}
+		return fmt.Errorf("business missing in context: %w", err)
 	}
 
 	if err := h.bsnCore.Delete(ctx, b); err != nil {
