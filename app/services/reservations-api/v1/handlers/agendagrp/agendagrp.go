@@ -195,7 +195,12 @@ func (h *Handlers) CreateDailyAgenda(ctx context.Context, w http.ResponseWriter,
 
 	gAgd, err := h.agdCore.CreateDailyAgenda(ctx, nAgd)
 	if err != nil {
-		return fmt.Errorf("create daily agenda: app[%+v]: %w", app, err)
+		switch {
+		case errors.Is(err, business.ErrNotFound):
+			return response.NewError(err, http.StatusNotFound)
+		default:
+			return fmt.Errorf("create daily agenda: app[%+v]: %w", app, err)
+		}
 	}
 
 	return web.Respond(ctx, w, toAppDailyAgenda(gAgd), http.StatusCreated)

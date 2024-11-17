@@ -193,11 +193,8 @@ func (c *Core) ConformGeneralAgendaBoundary(ctx context.Context, bsnID uuid.UUID
 // -------------------------------------------------------------------------------------------------------
 
 func (c *Core) CreateDailyAgenda(ctx context.Context, na NewDailyAgenda) (DailyAgenda, error) {
-	// TODO: Create an AuthorizeDailyAgenda middleware to check only users who own a business can create agenda plan for it.
-
 	_, err := c.bsnCore.QueryByID(ctx, na.BusinessID)
 	if err != nil {
-		// TODO: DOUBLE Check this!! We don't want this end up being 500 error!
 		return DailyAgenda{}, fmt.Errorf("busineess.querybyid: %s: %w", na.BusinessID, err)
 	}
 
