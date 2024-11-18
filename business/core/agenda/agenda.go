@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/data/order"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
@@ -40,16 +39,14 @@ type Storer interface {
 }
 
 type Core struct {
-	storer  Storer
-	log     *logger.Logger
-	bsnCore *business.Core
+	storer Storer
+	log    *logger.Logger
 }
 
-func NewCore(log *logger.Logger, bsnCore *business.Core, storer Storer) *Core {
+func NewCore(log *logger.Logger, storer Storer) *Core {
 	return &Core{
-		storer:  storer,
-		log:     log,
-		bsnCore: bsnCore,
+		storer: storer,
+		log:    log,
 	}
 }
 
@@ -59,26 +56,15 @@ func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error
 		return nil, err
 	}
 
-	bsnCore, err := c.bsnCore.ExecuteUnderTransaction(tx)
-	if err != nil {
-		return nil, err
-	}
-
 	c = &Core{
-		storer:  storer,
-		log:     c.log,
-		bsnCore: bsnCore,
+		storer: storer,
+		log:    c.log,
 	}
 
 	return c, nil
 }
 
 func (c *Core) CreateGeneralAgenda(ctx context.Context, na NewGeneralAgenda) (GeneralAgenda, error) {
-	_, err := c.bsnCore.QueryByID(ctx, na.BusinessID)
-	if err != nil {
-		return GeneralAgenda{}, fmt.Errorf("busineess.querybyid: %s: %w", na.BusinessID, err)
-	}
-
 	now := time.Now()
 
 	agd := GeneralAgenda{
@@ -193,11 +179,6 @@ func (c *Core) ConformGeneralAgendaBoundary(ctx context.Context, bsnID uuid.UUID
 // -------------------------------------------------------------------------------------------------------
 
 func (c *Core) CreateDailyAgenda(ctx context.Context, na NewDailyAgenda) (DailyAgenda, error) {
-	_, err := c.bsnCore.QueryByID(ctx, na.BusinessID)
-	if err != nil {
-		return DailyAgenda{}, fmt.Errorf("busineess.querybyid: %s: %w", na.BusinessID, err)
-	}
-
 	now := time.Now()
 
 	agd := DailyAgenda{

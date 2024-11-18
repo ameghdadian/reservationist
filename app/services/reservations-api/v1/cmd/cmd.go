@@ -163,6 +163,7 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 
 	authCfg := auth.Config{
 		Log:       log,
+		DB:        db,
 		KeyLookup: ks,
 	}
 

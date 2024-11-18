@@ -109,7 +109,6 @@ func (a *Auth) Authenticate(ctx context.Context, bearerToken string) (Claims, er
 	}
 
 	// Perform an extra level of authentication verification with OPA.
-
 	kidRaw, exists := token.Header["kid"]
 	if !exists {
 		return Claims{}, fmt.Errorf("kid missing from header: %w", err)
@@ -223,8 +222,13 @@ func (a *Auth) isUserEnabled(ctx context.Context, claims Claims) error {
 		return fmt.Errorf("parse user: %w", err)
 	}
 
-	if _, err := a.usrCore.QueryByID(ctx, userID); err != nil {
+	usr, err := a.usrCore.QueryByID(ctx, userID)
+	if err != nil {
 		return fmt.Errorf("query user: %w", err)
+	}
+
+	if !usr.Enabled {
+		return fmt.Errorf("user disabled")
 	}
 
 	return nil

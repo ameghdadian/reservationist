@@ -86,7 +86,12 @@ func Test_Web(t *testing.T) {
 			return seedData{}, fmt.Errorf("seeding businesses: %w", err)
 		}
 
-		bsns2, err := business.TestGenerateSeedBusinesses(1, api.Business, usrs[1].ID)
+		bsns2, err := business.TestGenerateSeedBusinesses(1, api.Business, usrs[0].ID)
+		if err != nil {
+			return seedData{}, fmt.Errorf("seeding businesses: %w", err)
+		}
+
+		bsns3, err := business.TestGenerateSeedBusinesses(1, api.Business, usrs[1].ID)
 		if err != nil {
 			return seedData{}, fmt.Errorf("seeding businesses: %w", err)
 		}
@@ -94,6 +99,7 @@ func Test_Web(t *testing.T) {
 		var bsns []business.Business
 		bsns = append(bsns, bsns1...)
 		bsns = append(bsns, bsns2...)
+		bsns = append(bsns, bsns3...)
 
 		apts1, err := appointment.TestGenerateSeedAppointments(1, api.Appointment, usrs[0].ID, bsns1[0].ID)
 		if err != nil {
@@ -168,11 +174,11 @@ func (wt *WebTests) query200(sd seedData) func(t *testing.T) {
 			},
 			{
 				name: "business",
-				url:  "/v1/businesses?page=1&rows=2&orderBy=owner_id,DESC",
+				url:  "/v1/businesses?page=1&rows=3&orderBy=owner_id,DESC",
 				resp: &response.PageDocument[businessgrp.AppBusiness]{},
 				expResp: &response.PageDocument[businessgrp.AppBusiness]{
 					Page:        1,
-					RowsPerPage: 2,
+					RowsPerPage: 3,
 					Total:       len(sd.businesses),
 					Items:       toAppBusinesses(sd.businesses),
 				},
@@ -257,9 +263,9 @@ func (wt *WebTests) queryByID200(sd seedData) func(t *testing.T) {
 			},
 			{
 				name:    "business",
-				url:     fmt.Sprintf("/v1/businesses/%s", sd.businesses[1].ID),
+				url:     fmt.Sprintf("/v1/businesses/%s", sd.businesses[2].ID),
 				resp:    &businessgrp.AppBusiness{},
-				expResp: toAppBusinessPtr(sd.businesses[1]),
+				expResp: toAppBusinessPtr(sd.businesses[2]),
 			},
 			{
 				name:    "appointment",
@@ -622,7 +628,7 @@ func (wt *WebTests) createDailyAgenda200(sd seedData) func(t *testing.T) {
 				name: "daily_agenda",
 				url:  "/v1/agendas/daily",
 				input: &agendagrp.AppNewDailyAgenda{
-					BusinessID:   sd.businesses[1].ID.String(),
+					BusinessID:   sd.businesses[2].ID.String(),
 					OpensAt:      time.Date(now.Year(), now.Month(), now.Day(), 10, 12, 0, 0, loc).Format(time.RFC3339),
 					ClosedAt:     time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc).Format(time.RFC3339),
 					Interval:     2 * 60 * 60, // Every 2 hours
@@ -631,7 +637,7 @@ func (wt *WebTests) createDailyAgenda200(sd seedData) func(t *testing.T) {
 				},
 				resp: &agendagrp.AppDailyAgenda{},
 				expResp: &agendagrp.AppDailyAgenda{
-					BusinessID:   sd.businesses[1].ID.String(),
+					BusinessID:   sd.businesses[2].ID.String(),
 					OpensAt:      time.Date(now.Year(), now.Month(), now.Day(), 10, 12, 0, 0, loc).Format(time.RFC3339),
 					ClosedAt:     time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc).Format(time.RFC3339),
 					Interval:     2 * 60 * 60, // Every 2 hours

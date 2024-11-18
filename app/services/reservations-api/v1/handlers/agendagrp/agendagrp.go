@@ -10,6 +10,7 @@ import (
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
+	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/business/web/v1/mid"
 	"github.com/ameghdadian/service/business/web/v1/response"
 	"github.com/ameghdadian/service/foundation/web"
@@ -22,11 +23,13 @@ var (
 
 type Handlers struct {
 	agdCore *agenda.Core
+	bsnCore *business.Core
 }
 
-func New(agdCore *agenda.Core) *Handlers {
+func New(agdCore *agenda.Core, bsnCore *business.Core) *Handlers {
 	return &Handlers{
 		agdCore: agdCore,
+		bsnCore: bsnCore,
 	}
 }
 
@@ -37,8 +40,14 @@ func (h *Handlers) executeUnderTransaction(ctx context.Context) (*Handlers, erro
 			return nil, err
 		}
 
+		bsnCore, err := h.bsnCore.ExecuteUnderTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+
 		return &Handlers{
 			agdCore: agdCore,
+			bsnCore: bsnCore,
 		}, nil
 	}
 
@@ -61,7 +70,7 @@ func (h *Handlers) CreateGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	gAgd, err := h.agdCore.CreateGeneralAgenda(ctx, nAgd)
+	bsn, err := h.bsnCore.QueryByID(ctx, nAgd.BusinessID)
 	if err != nil {
 		switch {
 		case errors.Is(err, business.ErrNotFound):
@@ -69,6 +78,19 @@ func (h *Handlers) CreateGeneralAgenda(ctx context.Context, w http.ResponseWrite
 		default:
 			return fmt.Errorf("create general agenda: app[%+v]: %w", app, err)
 		}
+	}
+
+	usrClaimID := auth.GetClaims(ctx).Subject
+	if usrClaimID != bsn.OwnerID.String() {
+		return response.NewError(
+			fmt.Errorf("you don't have the persmission for this action: %w", auth.ErrForbidden),
+			http.StatusForbidden,
+		)
+	}
+
+	gAgd, err := h.agdCore.CreateGeneralAgenda(ctx, nAgd)
+	if err != nil {
+		return fmt.Errorf("create general agenda: app[%+v]: %w", app, err)
 	}
 
 	return web.Respond(ctx, w, toAppGeneralAgenda(gAgd), http.StatusCreated)
@@ -193,14 +215,27 @@ func (h *Handlers) CreateDailyAgenda(ctx context.Context, w http.ResponseWriter,
 		return response.NewError(err, http.StatusBadRequest)
 	}
 
-	gAgd, err := h.agdCore.CreateDailyAgenda(ctx, nAgd)
+	bsn, err := h.bsnCore.QueryByID(ctx, nAgd.BusinessID)
 	if err != nil {
 		switch {
 		case errors.Is(err, business.ErrNotFound):
 			return response.NewError(err, http.StatusNotFound)
 		default:
-			return fmt.Errorf("create daily agenda: app[%+v]: %w", app, err)
+			return fmt.Errorf("create general agenda: app[%+v]: %w", app, err)
 		}
+	}
+
+	usrClaimID := auth.GetClaims(ctx).Subject
+	if usrClaimID != bsn.OwnerID.String() {
+		return response.NewError(
+			fmt.Errorf("you don't have the persmission for this action: %w", auth.ErrForbidden),
+			http.StatusForbidden,
+		)
+	}
+
+	gAgd, err := h.agdCore.CreateDailyAgenda(ctx, nAgd)
+	if err != nil {
+		return fmt.Errorf("create daily agenda: app[%+v]: %w", app, err)
 	}
 
 	return web.Respond(ctx, w, toAppDailyAgenda(gAgd), http.StatusCreated)

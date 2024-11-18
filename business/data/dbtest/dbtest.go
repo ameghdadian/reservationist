@@ -145,6 +145,7 @@ func NewTest(t *testing.T, c *docker.Container, rc *docker.Container) *Test {
 
 	cfg := auth.Config{
 		Log:       log,
+		DB:        db,
 		KeyLookup: &keyStore{},
 	}
 	a, err := auth.New(cfg)
@@ -254,7 +255,7 @@ func newCoreAPIs(log *logger.Logger, db *sqlx.DB, taskClient *asynq.Client, task
 	usrCore := user.NewCore(log, userdb.NewStore(log, db))
 	bsnCore := business.NewCore(log, usrCore, businessdb.NewStore(log, db))
 	aptCore := appointment.NewCore(log, usrCore, bsnCore, appointmentdb.NewStore(log, db), aptTask)
-	agdCore := agenda.NewCore(log, bsnCore, agendadb.NewStore(log, db))
+	agdCore := agenda.NewCore(log, agendadb.NewStore(log, db))
 
 	return CoreAPIs{
 		User:        usrCore,

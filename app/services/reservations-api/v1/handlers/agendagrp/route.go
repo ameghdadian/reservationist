@@ -29,7 +29,7 @@ func Routes(app *web.App, cfg Config) {
 
 	usrCore := user.NewCore(cfg.Log, userdb.NewStore(cfg.Log, cfg.DB))
 	bsnCore := business.NewCore(cfg.Log, usrCore, businessdb.NewStore(cfg.Log, cfg.DB))
-	agdCore := agenda.NewCore(cfg.Log, bsnCore, agendadb.NewStore(cfg.Log, cfg.DB))
+	agdCore := agenda.NewCore(cfg.Log, agendadb.NewStore(cfg.Log, cfg.DB))
 
 	authen := mid.Authenticate(cfg.Auth)
 	ruleAdminOnly := mid.Authorize(cfg.Auth, auth.RuleAdminOnly)
@@ -37,7 +37,7 @@ func Routes(app *web.App, cfg Config) {
 	ruleAuthorizedDaiAgenda := mid.AuthorizeDailyAgenda(cfg.Log, cfg.Auth, agdCore, bsnCore)
 	tran := mid.ExecuteInTransaction(cfg.Log, db.NewBeginner(cfg.DB))
 
-	hdl := New(agdCore)
+	hdl := New(agdCore, bsnCore)
 	// General Agenda Handlers
 	app.Handle(http.MethodPost, version, "/agendas/general", hdl.CreateGeneralAgenda, authen, tran)
 	app.Handle(http.MethodPut, version, "/agendas/general/{agenda_id}", hdl.UpdateGeneralAgenda, authen, tran, ruleAuthorizedGenAgenda)
