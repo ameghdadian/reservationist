@@ -195,6 +195,6 @@ test-race: test-race lint vuln-check
 gen-coverage:
 	go test -coverprofile=c.out ./...
 
-view-coverage: gen-coverage
+view-coverage:
 	go tool cover -html=c.out -o coverage.html
 	google-chrome coverage.html
