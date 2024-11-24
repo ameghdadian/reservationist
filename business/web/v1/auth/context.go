@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 )
@@ -32,11 +33,11 @@ func SetUserID(ctx context.Context, userID uuid.UUID) context.Context {
 	return context.WithValue(ctx, usrKey, userID)
 }
 
-func GetUserID(ctx context.Context) uuid.UUID {
+func GetUserID(ctx context.Context) (uuid.UUID, error) {
 	v, ok := ctx.Value(usrKey).(uuid.UUID)
 	if !ok {
-		return uuid.UUID{}
+		return uuid.UUID{}, errors.New("user id not found in context")
 	}
 
-	return v
+	return v, nil
 }

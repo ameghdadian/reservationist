@@ -3,6 +3,7 @@ package all
 import (
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/agendagrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/appointmentgrp"
+	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/authgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/businessgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/checkgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/usergrp"
@@ -17,6 +18,13 @@ func Routes() add {
 type add struct{}
 
 func (add) Add(app *web.App, cfg v1.APIMuxConfig) {
+
+	authgrp.Routes(app, authgrp.Config{
+		Build: cfg.Build,
+		Log:   cfg.Log,
+		Auth:  cfg.Auth,
+		DB:    cfg.DB,
+	})
 
 	checkgrp.Routes(app, checkgrp.Config{
 		Build: cfg.Build,
