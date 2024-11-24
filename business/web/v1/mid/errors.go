@@ -25,21 +25,19 @@ func Errors(log *logger.Logger) web.Middleware {
 				// Trusted errors
 				case response.IsError(err):
 					reqErr := response.GetError(err)
-
-					if validate.IsFieldErrors(reqErr.Err) {
-						fieldErrors := validate.GetFieldErrors(reqErr.Err)
-						er = response.ErrorDocument{
-							Error:  "data validation error",
-							Fields: fieldErrors.Fields(),
-						}
-						status = reqErr.Status
-						break
-					}
-
 					er = response.ErrorDocument{
 						Error: reqErr.Error(),
 					}
 					status = reqErr.Status
+
+				// Field error
+				case validate.IsFieldErrors(err):
+					fieldErrors := validate.GetFieldErrors(err)
+					er = response.ErrorDocument{
+						Error:  "data validation error",
+						Fields: fieldErrors.Fields(),
+					}
+					status = http.StatusBadRequest
 
 				// Auth error
 				case auth.IsAuthError(err):
