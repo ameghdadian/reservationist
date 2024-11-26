@@ -342,7 +342,7 @@ func (wt *WebTests) createUser200(sd seedData) func(t *testing.T) {
 					Email:   "j.doe@gmail.com",
 					Roles:   []string{"ADMIN"},
 					PhoneNo: "+989121928374",
-					Enabled: true,
+					Enabled: false,
 				},
 			},
 		}

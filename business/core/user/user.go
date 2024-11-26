@@ -72,7 +72,7 @@ func (c *Core) Create(ctx context.Context, nu NewUser) (User, error) {
 		Email:        nu.Email,
 		PasswordHash: hash,
 		Roles:        nu.Roles,
-		Enabled:      true,
+		Enabled:      false,
 		PhoneNo:      nu.PhoneNo,
 		DateCreated:  now,
 		DateUpdated:  now,
