@@ -9,6 +9,7 @@ import (
 	"github.com/ameghdadian/service/business/core/appointment"
 	db "github.com/ameghdadian/service/business/data/dbsql/pgx"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/google/uuid"
@@ -95,10 +96,10 @@ func (s *Store) Delete(ctx context.Context, apt appointment.Appointment) error {
 	return nil
 }
 
-func (s *Store) Query(ctx context.Context, filter appointment.QueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]appointment.Appointment, error) {
+func (s *Store) Query(ctx context.Context, filter appointment.QueryFilter, orderBy order.By, page page.Page) ([]appointment.Appointment, error) {
 	data := map[string]any{
-		"offset":        (pageNumber - 1) * rowsPerPage,
-		"rows_per_page": rowsPerPage,
+		"offset":        (page.Number() - 1) * page.RowsPerPage(),
+		"rows_per_page": page.RowsPerPage(),
 	}
 
 	const q = `

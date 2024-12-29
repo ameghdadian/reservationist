@@ -4,23 +4,23 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/ameghdadian/service/business/data/transaction"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
 )
 
-func ExecuteInTransaction(log *logger.Logger, bgn transaction.Beginner) web.Middleware {
-	m := func(handler web.Handler) web.Handler {
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func ExecuteInTransaction(log *logger.Logger, bgn transaction.Beginner) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			hasCommited := false
 
 			log.Info(ctx, "BEGIN TRANSACTOIN")
 			tx, err := bgn.Begin()
 			if err != nil {
-				return fmt.Errorf("BEGIN TRANSACTION: %w", err)
+				return errs.Newf(errs.Internal, "BEGIN TRANSACTION: %s", err)
 			}
 
 			defer func() {
@@ -38,18 +38,19 @@ func ExecuteInTransaction(log *logger.Logger, bgn transaction.Beginner) web.Midd
 
 			ctx = transaction.Set(ctx, tx)
 
-			if err := handler(ctx, w, r); err != nil {
-				return fmt.Errorf("EXECUTE TRANSACTION: %w", err)
+			resp := next(ctx, r)
+			if isError(resp) != nil {
+				return resp
 			}
 
 			log.Info(ctx, "COMMIT TRANSACTION")
 			if err := tx.Commit(); err != nil {
-				return fmt.Errorf("COMMIT TRANSACTION: %w", err)
+				return errs.Newf(errs.Internal, "COMMIT TRANSACTION: %s", err)
 			}
 
 			hasCommited = true
 
-			return nil
+			return resp
 		}
 
 		return h

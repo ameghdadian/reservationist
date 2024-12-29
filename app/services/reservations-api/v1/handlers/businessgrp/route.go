@@ -32,10 +32,10 @@ func Routes(app *web.App, cfg Config) {
 	ruleAuthorizeBusiness := mid.AuthorizeBusiness(cfg.Log, cfg.Auth, bsnCore)
 	tran := mid.ExecuteInTransaction(cfg.Log, db.NewBeginner(cfg.DB))
 
-	hdl := New(bsnCore, usrCore)
-	app.Handle(http.MethodGet, version, "/businesses", hdl.Query, authen)
-	app.Handle(http.MethodGet, version, "/businesses/{business_id}", hdl.QueryByID, authen)
-	app.Handle(http.MethodPost, version, "/businesses", hdl.Create, authen, tran)
-	app.Handle(http.MethodPut, version, "/businesses/{business_id}", hdl.Update, authen, tran, ruleAuthorizeBusiness)
-	app.Handle(http.MethodDelete, version, "/businesses/{business_id}", hdl.Delete, authen, tran, ruleAuthorizeBusiness)
+	hdl := newApp(bsnCore, usrCore)
+	app.Handle(http.MethodGet, version, "/businesses", hdl.query, authen)
+	app.Handle(http.MethodGet, version, "/businesses/{business_id}", hdl.queryByID, authen)
+	app.Handle(http.MethodPost, version, "/businesses", hdl.create, authen, tran)
+	app.Handle(http.MethodPut, version, "/businesses/{business_id}", hdl.update, authen, tran, ruleAuthorizeBusiness)
+	app.Handle(http.MethodDelete, version, "/businesses/{business_id}", hdl.delete, authen, tran, ruleAuthorizeBusiness)
 }

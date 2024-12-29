@@ -7,7 +7,7 @@ import (
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/businessgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/checkgrp"
 	"github.com/ameghdadian/service/app/services/reservations-api/v1/handlers/usergrp"
-	v1 "github.com/ameghdadian/service/business/web/v1"
+	"github.com/ameghdadian/service/business/web/v1/mux"
 	"github.com/ameghdadian/service/foundation/web"
 )
 
@@ -17,7 +17,7 @@ func Routes() add {
 
 type add struct{}
 
-func (add) Add(app *web.App, cfg v1.APIMuxConfig) {
+func (add) Add(app *web.App, cfg mux.APIMuxConfig) {
 
 	authgrp.Routes(app, authgrp.Config{
 		Build: cfg.Build,

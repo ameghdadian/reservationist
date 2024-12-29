@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/google/uuid"
@@ -25,7 +26,7 @@ type Storer interface {
 	CreateGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	UpdateGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
-	QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]GeneralAgenda, error)
+	QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, page page.Page) ([]GeneralAgenda, error)
 	QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (GeneralAgenda, error)
 	QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error)
 	CountGeneralAgenda(ctx context.Context, filter GAQueryFilter) (int, error)
@@ -33,7 +34,7 @@ type Storer interface {
 	CreateDailyAgenda(ctx context.Context, agd DailyAgenda) error
 	UpdateDailyAgenda(ctx context.Context, agd DailyAgenda) error
 	DeleteDailyAgenda(ctx context.Context, agd DailyAgenda) error
-	QueryDailyAgenda(ctx context.Context, filter DAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]DailyAgenda, error)
+	QueryDailyAgenda(ctx context.Context, filter DAQueryFilter, orderBy order.By, page page.Page) ([]DailyAgenda, error)
 	CountDailyAgenda(ctx context.Context, filter DAQueryFilter) (int, error)
 	QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (DailyAgenda, error)
 }
@@ -118,8 +119,8 @@ func (c *Core) DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 	return nil
 }
 
-func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]GeneralAgenda, error) {
-	agds, err := c.storer.QueryGeneralAgenda(ctx, filter, orderBy, pageNumber, rowsPerPage)
+func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, page page.Page) ([]GeneralAgenda, error) {
+	agds, err := c.storer.QueryGeneralAgenda(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
@@ -238,8 +239,8 @@ func (c *Core) DeleteDailyAgenda(ctx context.Context, agd DailyAgenda) error {
 	return nil
 }
 
-func (c *Core) QueryDailyAgenda(ctx context.Context, filter DAQueryFilter, orderBy order.By, page int, rowsPerPage int) ([]DailyAgenda, error) {
-	agds, err := c.storer.QueryDailyAgenda(ctx, filter, orderBy, page, rowsPerPage)
+func (c *Core) QueryDailyAgenda(ctx context.Context, filter DAQueryFilter, orderBy order.By, page page.Page) ([]DailyAgenda, error) {
+	agds, err := c.storer.QueryDailyAgenda(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
@@ -268,7 +269,11 @@ func (c *Core) ConformDailyAgendaBoundary(ctx context.Context, bsnID uuid.UUID, 
 	filter.WithBusinessID(bsnID)
 	filter.WithDate(checkTime.UTC().Format(time.DateOnly))
 
-	agds, err := c.storer.QueryDailyAgenda(ctx, filter, DefaultOrderBy, 1, 10)
+	pagination, err := page.Parse("1", "10")
+	if err != nil {
+		return fmt.Errorf("couldn't parse page parameters: %w", err)
+	}
+	agds, err := c.storer.QueryDailyAgenda(ctx, filter, DefaultOrderBy, pagination)
 	if err != nil {
 		return err
 	}

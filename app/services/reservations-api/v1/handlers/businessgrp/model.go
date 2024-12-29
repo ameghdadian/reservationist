@@ -1,13 +1,27 @@
 package businessgrp
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/ameghdadian/service/business/core/business"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
+
+type queryParams struct {
+	Page             string
+	Rows             string
+	OrderBy          string
+	BusinessID       string
+	Name             string
+	Desc             string
+	StartCreatedDate string
+	EndCreatedDate   string
+}
+
+// ===================================================================
 
 type AppBusiness struct {
 	ID          string `json:"id"`
@@ -16,6 +30,11 @@ type AppBusiness struct {
 	Description string `json:"description"`
 	DateCreated string `json:"-"`
 	DateUpdated string `json:"-"`
+}
+
+func (ab AppBusiness) Encode() ([]byte, string, error) {
+	data, err := json.Marshal(ab)
+	return data, "application/json", err
 }
 
 func toAppBusiness(b business.Business) AppBusiness {
@@ -47,7 +66,7 @@ type AppNewBusiness struct {
 }
 
 func (app AppNewBusiness) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return err
 	}
 
@@ -77,7 +96,7 @@ type AppUpdateBusiness struct {
 }
 
 func (app AppUpdateBusiness) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return err
 	}
 

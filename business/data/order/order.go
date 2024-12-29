@@ -1,12 +1,8 @@
 package order
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
-
-	"github.com/ameghdadian/service/foundation/validate"
 )
 
 const (
@@ -35,27 +31,32 @@ func NewBy(field string, direction string) By {
 
 // Parse construct a order.By value.
 // Order of appearance in the URL query param is: "?orderBy=field,direction"
-func Parse(r *http.Request, defaultOrder By) (By, error) {
-	v := r.URL.Query().Get("orderBy")
-
-	if v == "" {
-		return defaultOrder, nil
+func Parse(fieldMappings map[string]string, orderBy string, defaultOrderBy By) (By, error) {
+	if orderBy == "" {
+		return defaultOrderBy, nil
 	}
 
-	orderParts := strings.Split(v, ",")
-	var by By
+	orderParts := strings.Split(orderBy, ",")
+
+	orgFieldName := strings.TrimSpace(orderParts[0])
+	fieldName, exists := fieldMappings[orgFieldName]
+	if !exists {
+		return By{}, fmt.Errorf("unknown order: %s", orgFieldName)
+	}
+
 	switch len(orderParts) {
 	case 1:
-		by = NewBy(strings.Trim(orderParts[0], " "), ASC)
+		return NewBy(fieldName, ASC), nil
+
 	case 2:
-		by = NewBy(strings.Trim(orderParts[0], " "), strings.Trim(orderParts[1], " "))
+		direction := strings.TrimSpace(orderParts[1])
+		if _, exists := directions[direction]; !exists {
+			return By{}, fmt.Errorf("unknown direction: %s", direction)
+		}
+
+		return NewBy(fieldName, direction), nil
+
 	default:
-		return By{}, validate.NewFieldsError(v, errors.New("unknown order field"))
+		return By{}, fmt.Errorf("unknown order: %s", orderBy)
 	}
-
-	if _, exists := directions[by.Direction]; !exists {
-		return By{}, validate.NewFieldsError(v, fmt.Errorf("unknown direction: %s", by.Direction))
-	}
-
-	return by, nil
 }

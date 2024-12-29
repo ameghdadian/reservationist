@@ -3,50 +3,49 @@ package authgrp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/web/v1/auth"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/web"
 )
 
-type Handlers struct {
+type handlers struct {
 	user *user.Core
 	auth *auth.Auth
 }
 
-func New(user *user.Core, auth *auth.Auth) *Handlers {
-	return &Handlers{
+func newApp(user *user.Core, auth *auth.Auth) *handlers {
+	return &handlers{
 		user: user,
 		auth: auth,
 	}
 }
 
-func (h *Handlers) Token(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *handlers) token(ctx context.Context, r *http.Request) web.Encoder {
 	kid := web.Param(r, "kid")
 	if kid == "" {
-		return validate.NewFieldsError("kid", errors.New("missing kid"))
+		return errs.NewFieldErrors("kid", errors.New("missing kid"))
 	}
 
 	claims := auth.GetClaims(ctx)
 
 	token, err := h.auth.GenerateToken(kid, claims)
 	if err != nil {
-		return fmt.Errorf("generatetoken: %w", err)
+		return errs.Newf(errs.Internal, "generatetoken: %s", err)
 	}
 
-	return web.Respond(ctx, w, toToken(token), http.StatusOK)
+	return toToken(token)
 }
 
-func (h *Handlers) Authenticate(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *handlers) authenticate(ctx context.Context, r *http.Request) web.Encoder {
 	// The middleware handles the authentication. So when code gets to this
 	// handler, authentication is passed.
 
 	userID, err := auth.GetUserID(ctx)
 	if err != nil {
-		return auth.NewAuthError("%s", err)
+		return errs.Newf(errs.Internal, "%s", err)
 	}
 
 	resp := authenticateResp{
@@ -54,5 +53,5 @@ func (h *Handlers) Authenticate(ctx context.Context, w http.ResponseWriter, r *h
 		Claims: auth.GetClaims(ctx),
 	}
 
-	return web.Respond(ctx, w, resp, http.StatusOK)
+	return resp
 }

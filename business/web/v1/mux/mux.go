@@ -1,7 +1,7 @@
-package v1
+package mux
 
 import (
-	"os"
+	"context"
 
 	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/business/web/v1/mid"
@@ -13,7 +13,6 @@ import (
 
 type APIMuxConfig struct {
 	Build         string
-	Shutdown      chan os.Signal
 	Log           *logger.Logger
 	Auth          *auth.Auth
 	DB            *sqlx.DB
@@ -26,8 +25,11 @@ type RouterAdder interface {
 }
 
 func APIMux(cfg APIMuxConfig, routeAdder RouterAdder) *web.App {
+	logger := func(ctx context.Context, msg string, args ...any) {
+		cfg.Log.Info(ctx, msg, args...)
+	}
 	app := web.NewApp(
-		cfg.Shutdown,
+		logger,
 		mid.Logger(cfg.Log),
 		mid.Errors(cfg.Log),
 		mid.Metrics(),

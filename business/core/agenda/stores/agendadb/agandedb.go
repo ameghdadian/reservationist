@@ -9,6 +9,7 @@ import (
 	"github.com/ameghdadian/service/business/core/agenda"
 	db "github.com/ameghdadian/service/business/data/dbsql/pgx"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/google/uuid"
@@ -97,10 +98,10 @@ func (s *Store) DeleteGeneralAgenda(ctx context.Context, agd agenda.GeneralAgend
 	return nil
 }
 
-func (s *Store) QueryGeneralAgenda(ctx context.Context, filter agenda.GAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]agenda.GeneralAgenda, error) {
+func (s *Store) QueryGeneralAgenda(ctx context.Context, filter agenda.GAQueryFilter, orderBy order.By, page page.Page) ([]agenda.GeneralAgenda, error) {
 	data := map[string]any{
-		"offset":        (pageNumber - 1) * rowsPerPage,
-		"rows_per_page": rowsPerPage,
+		"offset":        (page.Number() - 1) * page.RowsPerPage(),
+		"rows_per_page": page.RowsPerPage(),
 	}
 
 	const q = `
@@ -281,10 +282,10 @@ func (s *Store) DeleteDailyAgenda(ctx context.Context, agd agenda.DailyAgenda) e
 	return nil
 }
 
-func (s *Store) QueryDailyAgenda(ctx context.Context, filter agenda.DAQueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]agenda.DailyAgenda, error) {
+func (s *Store) QueryDailyAgenda(ctx context.Context, filter agenda.DAQueryFilter, orderBy order.By, page page.Page) ([]agenda.DailyAgenda, error) {
 	data := map[string]any{
-		"offset":        (pageNumber - 1) * rowsPerPage,
-		"rows_per_page": rowsPerPage,
+		"offset":        (page.Number() - 1) * page.RowsPerPage(),
+		"rows_per_page": page.RowsPerPage(),
 	}
 
 	const q = `

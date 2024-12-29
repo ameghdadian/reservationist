@@ -8,23 +8,23 @@ import (
 	"github.com/ameghdadian/service/foundation/web"
 )
 
-func Metrics() web.Middleware {
-	m := func(handler web.Handler) web.Handler {
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func Metrics() web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			ctx = metrics.Set(ctx)
 
-			err := handler(ctx, w, r)
+			resp := next(ctx, r)
 
 			n := metrics.AddRequests(ctx)
 			if n%10000 == 0 {
 				metrics.AddGoroutines(ctx)
 			}
 
-			if err != nil {
+			if isError(resp) != nil {
 				metrics.AddErrors(ctx)
 			}
 
-			return err
+			return resp
 		}
 
 		return h

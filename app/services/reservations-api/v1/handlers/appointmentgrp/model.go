@@ -1,13 +1,29 @@
 package appointmentgrp
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/ameghdadian/service/business/core/appointment"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
+
+type queryParams struct {
+	Page             string
+	Rows             string
+	OrderBy          string
+	ID               string
+	BusinessID       string
+	UserID           string
+	Status           string
+	ScheduledOn      string
+	StartCreatedDate string
+	EndCreatedDate   string
+}
+
+// ====================================================================
 
 type AppAppointment struct {
 	ID          string `json:"id"`
@@ -17,6 +33,11 @@ type AppAppointment struct {
 	ScheduledOn string `json:"scheduled_on"`
 	DateCreated string `json:"-"`
 	DateUpdated string `json:"-"`
+}
+
+func (a AppAppointment) Encode() ([]byte, string, error) {
+	data, err := json.Marshal(a)
+	return data, "application/json", err
 }
 
 func toAppAppointment(apt appointment.Appointment) AppAppointment {
@@ -50,7 +71,7 @@ type AppNewAppointment struct {
 }
 
 func (app AppNewAppointment) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
@@ -96,7 +117,7 @@ type AppUpdateAppointment struct {
 }
 
 func (app AppUpdateAppointment) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 

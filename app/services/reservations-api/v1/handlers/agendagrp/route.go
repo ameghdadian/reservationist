@@ -37,17 +37,17 @@ func Routes(app *web.App, cfg Config) {
 	ruleAuthorizedDaiAgenda := mid.AuthorizeDailyAgenda(cfg.Log, cfg.Auth, agdCore, bsnCore)
 	tran := mid.ExecuteInTransaction(cfg.Log, db.NewBeginner(cfg.DB))
 
-	hdl := New(agdCore, bsnCore)
+	hdl := newApp(agdCore, bsnCore)
 	// General Agenda Handlers
-	app.Handle(http.MethodPost, version, "/agendas/general", hdl.CreateGeneralAgenda, authen, tran)
-	app.Handle(http.MethodPut, version, "/agendas/general/{agenda_id}", hdl.UpdateGeneralAgenda, authen, tran, ruleAuthorizedGenAgenda)
-	app.Handle(http.MethodDelete, version, "/agendas/general/{agenda_id}", hdl.DeleteGeneralAgenda, authen, tran, ruleAuthorizedGenAgenda)
-	app.Handle(http.MethodGet, version, "/agendas/general", hdl.QueryGeneralAgenda, authen, ruleAdminOnly)
-	app.Handle(http.MethodGet, version, "/agendas/general/{agenda_id}", hdl.QueryGeneralAgendaByID, authen)
+	app.Handle(http.MethodPost, version, "/agendas/general", hdl.createGeneralAgenda, authen, tran)
+	app.Handle(http.MethodPut, version, "/agendas/general/{agenda_id}", hdl.updateGeneralAgenda, authen, tran, ruleAuthorizedGenAgenda)
+	app.Handle(http.MethodDelete, version, "/agendas/general/{agenda_id}", hdl.deleteGeneralAgenda, authen, tran, ruleAuthorizedGenAgenda)
+	app.Handle(http.MethodGet, version, "/agendas/general", hdl.queryGeneralAgenda, authen, ruleAdminOnly)
+	app.Handle(http.MethodGet, version, "/agendas/general/{agenda_id}", hdl.queryGeneralAgendaByID, authen)
 	// Daily Agenda Handlers
-	app.Handle(http.MethodPost, version, "/agendas/daily", hdl.CreateDailyAgenda, authen, tran)
-	app.Handle(http.MethodPut, version, "/agendas/daily/{agenda_id}", hdl.UpdateDailyAgenda, authen, tran, ruleAuthorizedDaiAgenda)
-	app.Handle(http.MethodDelete, version, "/agendas/daily/{agenda_id}", hdl.DeleteDailyAgenda, authen, tran, ruleAuthorizedDaiAgenda)
-	app.Handle(http.MethodGet, version, "/agendas/daily", hdl.QueryDailyAgenda, authen)
-	app.Handle(http.MethodGet, version, "/agendas/daily/{agenda_id}", hdl.QueryDailyAgendaByID, authen)
+	app.Handle(http.MethodPost, version, "/agendas/daily", hdl.createDailyAgenda, authen, tran)
+	app.Handle(http.MethodPut, version, "/agendas/daily/{agenda_id}", hdl.updateDailyAgenda, authen, tran, ruleAuthorizedDaiAgenda)
+	app.Handle(http.MethodDelete, version, "/agendas/daily/{agenda_id}", hdl.deleteDailyAgenda, authen, tran, ruleAuthorizedDaiAgenda)
+	app.Handle(http.MethodGet, version, "/agendas/daily", hdl.queryDailyAgenda, authen)
+	app.Handle(http.MethodGet, version, "/agendas/daily/{agenda_id}", hdl.queryDailyAgendaByID, authen)
 }

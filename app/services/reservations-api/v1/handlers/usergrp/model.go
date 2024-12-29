@@ -1,13 +1,28 @@
 package usergrp
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/mail"
 	"time"
 
 	"github.com/ameghdadian/service/business/core/user"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 )
+
+type queryParams struct {
+	Page             string
+	Rows             string
+	OrderBy          string
+	UserID           string
+	Email            string
+	StartCreatedDate string
+	EndCreatedDate   string
+	Name             string
+	PhoneNumber      string
+}
+
+// =====================================================================
 
 type AppUser struct {
 	ID           string   `json:"id"`
@@ -19,6 +34,11 @@ type AppUser struct {
 	PhoneNo      string   `json:"phone_number"`
 	DateCreated  string   `json:"-"`
 	DateUpdated  string   `json:"-"`
+}
+
+func (app AppUser) Encode() ([]byte, string, error) {
+	data, err := json.Marshal(app)
+	return data, "application/json", err
 }
 
 func toAppUser(usr user.User) AppUser {
@@ -61,7 +81,7 @@ type AppNewUser struct {
 }
 
 func (app AppNewUser) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return err
 	}
 
@@ -111,7 +131,7 @@ type AppUpdateUser struct {
 }
 
 func (app AppUpdateUser) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 

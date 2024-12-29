@@ -2,54 +2,55 @@ package web
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type Handler func(ctx context.Context, w http.ResponseWriter, r *http.Request) error
+// Encoder defines behaviour that can encode a data model and provide the
+// content type for that encoding.
+type Encoder interface {
+	Encode() (data []byte, contentType string, err error)
+}
 
+// Handler represents a function that handles a http request within our framework.
 // Both httptreemux and go router provided following handler signature
 // func (w http.ResponseWriter, r *http.Request)
 // What we need:
-// func (ctx context.Context, w http.ResponseWriter, r *http.Requst) error
+// func (ctx context.Context, r *http.Requst) error
 // So we need a customized version of handler.
+type HandlerFunc func(ctx context.Context, r *http.Request) Encoder
 
+type Logger func(ctx context.Context, msg string, args ...any)
 type App struct {
+	log Logger
 	*http.ServeMux
-	shutdown chan os.Signal
-	mw       []Middleware
+	mw []MidFunc
 }
 
-func NewApp(shutdown chan os.Signal, mw ...Middleware) *App {
+func NewApp(log Logger, mw ...MidFunc) *App {
 	return &App{
+		log:      log,
 		ServeMux: http.NewServeMux(),
-		shutdown: shutdown,
 		mw:       mw,
 	}
 }
 
-func (a *App) SignalShutdown() {
-	a.shutdown <- syscall.SIGTERM
-}
-
-func (a *App) HandleNoMiddleware(method string, group string, path string, handler Handler) {
+func (a *App) HandleNoMiddleware(method string, group string, path string, handler HandlerFunc) {
 	a.handle(method, group, path, handler)
 }
 
-func (a *App) Handle(method string, group string, path string, handler Handler, mw ...Middleware) {
+func (a *App) Handle(method string, group string, path string, handler HandlerFunc, mw ...MidFunc) {
 	handler = wrapMiddleware(mw, handler)
 	handler = wrapMiddleware(a.mw, handler)
 
 	a.handle(method, group, path, handler)
 }
 
-func (a *App) handle(method string, group string, path string, handler Handler) {
+func (a *App) handle(method string, group string, path string, handler HandlerFunc) {
+
 	h := func(w http.ResponseWriter, r *http.Request) {
 
 		v := Values{
@@ -58,11 +59,10 @@ func (a *App) handle(method string, group string, path string, handler Handler) 
 		}
 		ctx := SetValues(r.Context(), &v)
 
-		if err := handler(ctx, w, r); err != nil {
-			if validateShutdown(err) {
-				a.SignalShutdown()
-				return
-			}
+		resp := handler(ctx, r)
+		if err := Respond(ctx, w, r, resp); err != nil {
+			a.log(ctx, "web-respond", "ERROR", err)
+			return
 		}
 	}
 
@@ -74,18 +74,4 @@ func (a *App) handle(method string, group string, path string, handler Handler) 
 	pattern := fmt.Sprintf("%s %s", method, finalPath)
 
 	a.ServeMux.HandleFunc(pattern, h)
-}
-
-func validateShutdown(err error) bool {
-	switch {
-	// You get broken pipe error when writing on the connection that's
-	// previously closed.
-	case errors.Is(err, syscall.EPIPE):
-		return false
-	// You get connection reset by peer error when reading from connection
-	// closed by peer.
-	case errors.Is(err, syscall.ECONNRESET):
-		return false
-	}
-	return true
 }

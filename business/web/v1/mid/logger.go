@@ -2,18 +2,20 @@ package mid
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
 )
 
-func Logger(log *logger.Logger) web.Middleware {
-	m := func(handler web.Handler) web.Handler {
+func Logger(log *logger.Logger) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
 
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			v := web.GetValues(ctx)
 
 			path := r.URL.Path
@@ -24,12 +26,23 @@ func Logger(log *logger.Logger) web.Middleware {
 			log.Info(ctx, "request started", "method", r.Method, "path", path,
 				"remoteaddr", r.RemoteAddr)
 
-			err := handler(ctx, w, r)
+			resp := next(ctx, r)
+			err := isError(resp)
+
+			var statusCode = errs.OK
+			if err != nil {
+				statusCode = errs.Internal
+
+				var v *errs.Error
+				if errors.As(err, &v) {
+					statusCode = v.Code
+				}
+			}
 
 			log.Info(ctx, "request completed", "method", r.Method, "path", path,
-				"remoteaddr", r.RemoteAddr, "since", time.Since(v.Now))
+				"remoteaddr", r.RemoteAddr, "statuscode", statusCode, "since", time.Since(v.Now))
 
-			return err
+			return resp
 		}
 
 		return h

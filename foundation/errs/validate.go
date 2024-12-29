@@ -1,6 +1,7 @@
-package validate
+package errs
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 
@@ -49,11 +50,10 @@ func Check(val any) error {
 
 		var fields FieldErrors
 		for _, verror := range verrors {
-			field := FieldError{
-				Field: verror.Field(),
-				Err:   verror.Translate(translator),
-			}
-			fields = append(fields, field)
+			fields.Add(
+				verror.Field(),
+				errors.New(verror.Translate(translator)),
+			)
 		}
 
 		return fields

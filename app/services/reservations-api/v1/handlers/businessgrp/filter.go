@@ -5,57 +5,75 @@ import (
 	"time"
 
 	"github.com/ameghdadian/service/business/core/business"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
 
-func parseFilter(r *http.Request) (business.QueryFilter, error) {
-	const (
-		filterByBusinessID       = "business_id"
-		filterByName             = "name"
-		filterByDesc             = "description"
-		filterByStartCreatedDate = "start_created_date"
-		filterByEndCreatedDate   = "end_created_date"
-	)
-
+func parseQueryParams(r *http.Request) (queryParams, error) {
 	values := r.URL.Query()
 
+	filter := queryParams{
+		Page:             values.Get("page"),
+		Rows:             values.Get("row"),
+		OrderBy:          values.Get("orderBy"),
+		BusinessID:       values.Get("business_id"),
+		Name:             values.Get("name"),
+		Desc:             values.Get("description"),
+		StartCreatedDate: values.Get("start_created_date"),
+		EndCreatedDate:   values.Get("end_created_date"),
+	}
+
+	return filter, nil
+}
+
+func parseFilter(qp queryParams) (business.QueryFilter, error) {
+	var fieldErrors errs.FieldErrors
 	var filter business.QueryFilter
 
-	if businessID := values.Get(filterByBusinessID); businessID != "" {
-		id, err := uuid.Parse(businessID)
-		if err != nil {
-			return business.QueryFilter{}, validate.NewFieldsError(filterByBusinessID, err)
+	if qp.BusinessID != "" {
+		id, err := uuid.Parse(qp.BusinessID)
+		switch err {
+		case nil:
+			filter.WithBusinessID(id)
+		default:
+			fieldErrors.Add("business_id", err)
 		}
-		filter.WithBusinessID(id)
 	}
 
-	if name := values.Get(filterByName); name != "" {
-		filter.WithName(name)
+	if qp.Name != "" {
+		filter.WithName(qp.Name)
 	}
 
-	if desc := values.Get(filterByDesc); desc != "" {
-		filter.WithDesc(desc)
+	if qp.Desc != "" {
+		filter.WithDesc(qp.Desc)
 	}
 
-	if createdDate := values.Get(filterByStartCreatedDate); createdDate != "" {
-		t, err := time.Parse(time.RFC3339, createdDate)
-		if err != nil {
-			return business.QueryFilter{}, validate.NewFieldsError(filterByStartCreatedDate, err)
+	if qp.StartCreatedDate != "" {
+		t, err := time.Parse(time.RFC3339, qp.StartCreatedDate)
+		switch err {
+		case nil:
+			filter.WithStartCreatedDate(t)
+		default:
+			fieldErrors.Add("start_created_date", err)
 		}
-		filter.WithStartCreatedDate(t)
 	}
 
-	if createdDate := values.Get(filterByEndCreatedDate); createdDate != "" {
-		t, err := time.Parse(time.RFC3339, createdDate)
-		if err != nil {
-			return business.QueryFilter{}, validate.NewFieldsError(filterByEndCreatedDate, err)
+	if qp.EndCreatedDate != "" {
+		t, err := time.Parse(time.RFC3339, qp.EndCreatedDate)
+		switch err {
+		case nil:
+			filter.WithEndCreatedDate(t)
+		default:
+			fieldErrors.Add(qp.EndCreatedDate, err)
 		}
-		filter.WithEndCreatedDate(t)
 	}
 
 	if err := filter.Validate(); err != nil {
-		return business.QueryFilter{}, err
+		fieldErrors.Add("filter validation", err)
+	}
+
+	if fieldErrors != nil {
+		return business.QueryFilter{}, fieldErrors.ToError()
 	}
 
 	return filter, nil

@@ -2,28 +2,30 @@ package mid
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"runtime/debug"
 
 	"github.com/ameghdadian/service/business/web/v1/metrics"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/web"
 )
 
-func Panics() web.Middleware {
-	m := func(handler web.Handler) web.Handler {
+func Panics() web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
 
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) (err error) {
+		h := func(ctx context.Context, r *http.Request) (resp web.Encoder) {
+
+			// Defer a function to recover from a panic.
 			defer func() {
 				if rec := recover(); rec != nil {
 					trace := debug.Stack()
-					err = fmt.Errorf("PANIC [%v] TRACE[%s]", rec, string(trace))
+					resp = errs.Newf(errs.InternalOnlyLog, "PANIC [%v] TRACE[%s]", rec, string(trace))
 
 					metrics.AddPanics(ctx)
 				}
 			}()
 
-			return handler(ctx, w, r)
+			return next(ctx, r)
 		}
 
 		return h

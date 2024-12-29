@@ -14,8 +14,8 @@ import (
 
 	db "github.com/ameghdadian/service/business/data/dbsql/pgx"
 	"github.com/ameghdadian/service/business/web/debug"
-	v1 "github.com/ameghdadian/service/business/web/v1"
 	"github.com/ameghdadian/service/business/web/v1/auth"
+	"github.com/ameghdadian/service/business/web/v1/mux"
 	"github.com/ameghdadian/service/foundation/keystore"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
@@ -24,7 +24,7 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-func Main(build string, routeAdder v1.RouterAdder) error {
+func Main(build string, routeAdder mux.RouterAdder) error {
 	var log *logger.Logger
 
 	events := logger.Events{
@@ -51,7 +51,7 @@ func Main(build string, routeAdder v1.RouterAdder) error {
 	return nil
 }
 
-func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.RouterAdder) error {
+func run(ctx context.Context, log *logger.Logger, build string, routeAdder mux.RouterAdder) error {
 
 	// ------------------------------------------------------------------------------
 	// GOMAXPROCS
@@ -189,9 +189,8 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
-	cfgMux := v1.APIMuxConfig{
+	cfgMux := mux.APIMuxConfig{
 		Build:         build,
-		Shutdown:      shutdown,
 		Log:           log,
 		Auth:          auth,
 		DB:            db,
@@ -199,7 +198,7 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 		TaskInspector: taskInspector,
 	}
 
-	apiMux := v1.APIMux(cfgMux, routeAdder)
+	apiMux := mux.APIMux(cfgMux, routeAdder)
 
 	srv := http.Server{
 		Addr:         cfg.Web.APIHost,
@@ -237,7 +236,7 @@ func run(ctx context.Context, log *logger.Logger, build string, routeAdder v1.Ro
 	return nil
 }
 
-func InitTaskWorkers(build string, taskRouter v1.TaskRouter) error {
+func InitTaskWorkers(build string, taskRouter mux.TaskRouter) error {
 	var log *logger.Logger
 
 	events := logger.Events{
@@ -264,7 +263,7 @@ func InitTaskWorkers(build string, taskRouter v1.TaskRouter) error {
 	return nil
 }
 
-func initWorkers(ctx context.Context, log *logger.Logger, build string, taskRouter v1.TaskRouter) error {
+func initWorkers(ctx context.Context, log *logger.Logger, build string, taskRouter mux.TaskRouter) error {
 
 	// ------------------------------------------------------------------------------
 	// GOMAXPROCS
@@ -363,18 +362,18 @@ func initWorkers(ctx context.Context, log *logger.Logger, build string, taskRout
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
-	mux := asynq.NewServeMux()
-	cfgMux := v1.TaskMuxConfig{
+	asynqMux := asynq.NewServeMux()
+	cfgMux := mux.TaskMuxConfig{
 		DB:  db,
 		Log: log,
-		Mux: mux,
+		Mux: asynqMux,
 	}
-	v1.TaskMux(cfgMux, taskRouter)
+	mux.TaskMux(cfgMux, taskRouter)
 
 	serverErrors := make(chan error, 1)
 	go func() {
 		log.Info(ctx, "Number of workers:", "count", cfg.Worker.NumOfWorkers)
-		serverErrors <- srv.Run(mux)
+		serverErrors <- srv.Run(asynqMux)
 	}()
 
 	// ------------------------------------------------------------------------------

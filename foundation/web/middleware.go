@@ -1,8 +1,8 @@
 package web
 
-type Middleware func(Handler) Handler
+type MidFunc func(HandlerFunc) HandlerFunc
 
-func wrapMiddleware(mw []Middleware, h Handler) Handler {
+func wrapMiddleware(mw []MidFunc, h HandlerFunc) HandlerFunc {
 	for i := len(mw) - 1; i >= 0; i-- {
 		mwFunc := mw[i]
 		if mwFunc != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/google/uuid"
@@ -27,7 +28,7 @@ type Storer interface {
 	Create(ctx context.Context, apt Appointment) error
 	Update(ctx context.Context, apt Appointment) error
 	Delete(ctx context.Context, apt Appointment) error
-	Query(ctx context.Context, filter QueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]Appointment, error)
+	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Appointment, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, aptID uuid.UUID) (Appointment, error)
 	QueryByUserID(ctx context.Context, usrID uuid.UUID) ([]Appointment, error)
@@ -101,7 +102,13 @@ func (c *Core) Create(ctx context.Context, na NewAppointment) (Appointment, erro
 	var filter QueryFilter
 	filter.WithScheduledOn(na.ScheduledOn.UTC())
 	filter.WithBusinessID(na.BusinessID)
-	agds, err := c.storer.Query(ctx, filter, DefaultOrderBy, 1, 1)
+
+	page, err := page.Parse("1", "1")
+	if err != nil {
+		return Appointment{}, fmt.Errorf("couldn't parse page parameters: %w", err)
+	}
+
+	agds, err := c.storer.Query(ctx, filter, DefaultOrderBy, page)
 	if err != nil {
 		return Appointment{}, fmt.Errorf("query: %w", err)
 	}
@@ -183,8 +190,8 @@ func (c *Core) Delete(ctx context.Context, apt Appointment) error {
 	return nil
 }
 
-func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page int, rowsPerPage int) ([]Appointment, error) {
-	apts, err := c.storer.Query(ctx, filter, orderBy, page, rowsPerPage)
+func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Appointment, error) {
+	apts, err := c.storer.Query(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}

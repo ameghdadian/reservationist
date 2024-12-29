@@ -27,7 +27,7 @@ func Routes(app *web.App, cfg Config) {
 	bearer := mid.Bearer(cfg.Auth)
 	basic := mid.Basic(cfg.Auth, usrCore)
 
-	hdl := New(usrCore, cfg.Auth)
-	app.Handle(http.MethodGet, version, "/auth/token/{kid}", hdl.Token, basic)
-	app.Handle(http.MethodGet, version, "/auth/authenticate", hdl.Authenticate, bearer)
+	hdl := newApp(usrCore, cfg.Auth)
+	app.Handle(http.MethodGet, version, "/auth/token/{kid}", hdl.token, basic)
+	app.Handle(http.MethodGet, version, "/auth/authenticate", hdl.authenticate, bearer)
 }

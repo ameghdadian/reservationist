@@ -3,7 +3,7 @@ package agenda
 import (
 	"fmt"
 
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
 
@@ -13,7 +13,7 @@ type GAQueryFilter struct {
 }
 
 func (qf *GAQueryFilter) Validate() error {
-	if err := validate.Check(qf); err != nil {
+	if err := errs.Check(qf); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
@@ -40,7 +40,7 @@ type DAQueryFilter struct {
 }
 
 func (qf *DAQueryFilter) Validate() error {
-	if err := validate.Check(qf); err != nil {
+	if err := errs.Check(qf); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 

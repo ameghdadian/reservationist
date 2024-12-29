@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -23,7 +22,8 @@ import (
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/dbtest"
 	"github.com/ameghdadian/service/business/data/order"
-	v1 "github.com/ameghdadian/service/business/web/v1"
+	"github.com/ameghdadian/service/business/data/page"
+	"github.com/ameghdadian/service/business/web/v1/mux"
 	"github.com/ameghdadian/service/business/web/v1/response"
 	"github.com/google/go-cmp/cmp"
 )
@@ -59,10 +59,8 @@ func Test_Web(t *testing.T) {
 
 	api := test.CoreAPIs
 
-	shutdown := make(chan os.Signal, 1)
 	tests := WebTests{
-		app: v1.APIMux(v1.APIMuxConfig{
-			Shutdown:      shutdown,
+		app: mux.APIMux(mux.APIMuxConfig{
 			Log:           test.Log,
 			Auth:          test.V1.Auth,
 			DB:            test.DB,
@@ -76,7 +74,8 @@ func Test_Web(t *testing.T) {
 	// ================================================================
 
 	seed := func(ctx context.Context, api dbtest.CoreAPIs) (seedData, error) {
-		usrs, err := api.User.Query(ctx, user.QueryFilter{}, order.By{Field: user.OrderByName, Direction: order.ASC}, 1, 2)
+		pagination := page.MustParse("1", "2")
+		usrs, err := api.User.Query(ctx, user.QueryFilter{}, order.By{Field: user.OrderByName, Direction: order.ASC}, pagination)
 		if err != nil {
 			return seedData{}, fmt.Errorf("seeding users: %w", err)
 		}
@@ -178,7 +177,7 @@ func (wt *WebTests) query200(sd seedData) func(t *testing.T) {
 				resp: &response.PageDocument[businessgrp.AppBusiness]{},
 				expResp: &response.PageDocument[businessgrp.AppBusiness]{
 					Page:        1,
-					RowsPerPage: 3,
+					RowsPerPage: 10,
 					Total:       len(sd.businesses),
 					Items:       toAppBusinesses(sd.businesses),
 				},

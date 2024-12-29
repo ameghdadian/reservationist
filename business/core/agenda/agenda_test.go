@@ -13,6 +13,7 @@ import (
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/dbtest"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/redistest"
 	"github.com/ameghdadian/service/foundation/docker"
 	"github.com/google/go-cmp/cmp"
@@ -59,7 +60,8 @@ func crud(t *testing.T) {
 		var filter user.QueryFilter
 		filter.WithName("User Gopher")
 
-		usrs, err := usrCore.Query(ctx, filter, user.DefaultOrderBy, 1, 1)
+		pagination := page.MustParse("1", "1")
+		usrs, err := usrCore.Query(ctx, filter, user.DefaultOrderBy, pagination)
 		if err != nil {
 			return seedData{}, err
 		}
@@ -150,7 +152,8 @@ func crud(t *testing.T) {
 		t.Fatalf("Should be able to retrieve general agenda by ID: %s", err)
 	}
 
-	agds, err := api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &sd.gAgds[0].ID}, order.NewBy(agenda.DefaultOrderBy.Field, order.ASC), 1, 1)
+	pagination := page.MustParse("1", "1")
+	agds, err := api.Agenda.QueryGeneralAgenda(ctx, agenda.GAQueryFilter{ID: &sd.gAgds[0].ID}, order.NewBy(agenda.DefaultOrderBy.Field, order.ASC), pagination)
 	if err != nil {
 		t.Fatalf("Should be able to retrieve general agenda by ID: %s", err)
 	}

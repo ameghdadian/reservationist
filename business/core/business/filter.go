@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
 
@@ -17,7 +17,7 @@ type QueryFilter struct {
 }
 
 func (qf *QueryFilter) Validate() error {
-	if err := validate.Check(qf); err != nil {
+	if err := errs.Check(qf); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 

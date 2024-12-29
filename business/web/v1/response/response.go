@@ -1,6 +1,11 @@
 package response
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+
+	"github.com/ameghdadian/service/business/data/page"
+)
 
 type PageDocument[T any] struct {
 	Items       []T `json:"items"`
@@ -9,13 +14,18 @@ type PageDocument[T any] struct {
 	RowsPerPage int `json:"rows_per_page"`
 }
 
-func NewPageDocument[T any](items []T, total int, page int, rowsPerPage int) PageDocument[T] {
+func NewPageDocument[T any](items []T, total int, page page.Page) PageDocument[T] {
 	return PageDocument[T]{
 		Items:       items,
 		Total:       total,
-		Page:        page,
-		RowsPerPage: rowsPerPage,
+		Page:        page.Number(),
+		RowsPerPage: page.RowsPerPage(),
 	}
+}
+
+func (pd PageDocument[T]) Encode() ([]byte, string, error) {
+	data, err := json.Marshal(pd)
+	return data, "application/json", err
 }
 
 // ============================================================================

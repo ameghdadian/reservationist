@@ -3,7 +3,6 @@ package mid
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/ameghdadian/service/business/core/appointment"
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/web/v1/auth"
-	"github.com/ameghdadian/service/business/web/v1/response"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/google/uuid"
@@ -23,13 +22,13 @@ var (
 
 // Authorize validates that an authenticated user has at least one role from a
 // specified list. This method constructs the actual function that is used.
-func Authorize(a *auth.Auth, rule string) web.Middleware {
-	m := func(handler web.Handler) web.Handler {
+func Authorize(a *auth.Auth, rule string) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
 
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			claims := auth.GetClaims(ctx)
 			if claims.Subject == "" {
-				return auth.NewAuthError("authorize: you are not authorized for that action, no claims")
+				return errs.Newf(errs.Unauthenticated, "authorize: you are not authorized for that action, no claims")
 			}
 
 			var userID uuid.UUID
@@ -38,16 +37,16 @@ func Authorize(a *auth.Auth, rule string) web.Middleware {
 				var err error
 				userID, err = uuid.Parse(id)
 				if err != nil {
-					return response.NewError(ErrInvalidID, http.StatusBadRequest)
+					return errs.New(errs.Unauthenticated, ErrInvalidID)
 				}
 				ctx = auth.SetUserID(ctx, userID)
 			}
 
 			if err := a.Authorize(ctx, claims, userID, rule); err != nil {
-				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, rule, err)
+				return errs.Newf(errs.Unauthenticated, "authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, rule, err)
 			}
 
-			return handler(ctx, w, r)
+			return next(ctx, r)
 		}
 
 		return h
@@ -56,26 +55,26 @@ func Authorize(a *auth.Auth, rule string) web.Middleware {
 	return m
 }
 
-func AuthorizeBusiness(log *logger.Logger, ath *auth.Auth, bsnCore *business.Core) web.Middleware {
-	m := func(handler web.Handler) web.Handler {
+func AuthorizeBusiness(log *logger.Logger, ath *auth.Auth, bsnCore *business.Core) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
 
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			var userID uuid.UUID
 			id := web.Param(r, "business_id")
 
 			if id != "" {
 				bsnID, err := uuid.Parse(id)
 				if err != nil {
-					return response.NewError(ErrInvalidID, http.StatusBadRequest)
+					return errs.New(errs.Unauthenticated, ErrInvalidID)
 				}
 
 				bsn, err := bsnCore.QueryByID(ctx, bsnID)
 				if err != nil {
 					if errors.Is(err, business.ErrNotFound) {
-						return response.NewError(err, http.StatusNotFound)
+						return errs.New(errs.Unauthenticated, err)
 					}
 
-					return fmt.Errorf("querybyid: bsnID[%s]: %w", bsnID, err)
+					return errs.Newf(errs.Internal, "querybyid: bsnID[%s]: %s", bsnID, err)
 				}
 
 				userID = bsn.OwnerID
@@ -87,10 +86,10 @@ func AuthorizeBusiness(log *logger.Logger, ath *auth.Auth, bsnCore *business.Cor
 
 			claims := auth.GetClaims(ctx)
 			if err := ath.Authorize(ctx, claims, userID, auth.RuleAdminOrSubject); err != nil {
-				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
+				return errs.Newf(errs.Unauthenticated, "authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
 			}
 
-			return handler(ctx, w, r)
+			return next(ctx, r)
 		}
 
 		return h
@@ -99,26 +98,26 @@ func AuthorizeBusiness(log *logger.Logger, ath *auth.Auth, bsnCore *business.Cor
 	return m
 }
 
-func AuthorizeAppointment(log *logger.Logger, ath *auth.Auth, aptCore *appointment.Core) web.Middleware {
-	m := func(handler web.Handler) web.Handler {
+func AuthorizeAppointment(log *logger.Logger, ath *auth.Auth, aptCore *appointment.Core) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
 
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			var userID uuid.UUID
 			id := web.Param(r, "appointment_id")
 
 			if id != "" {
 				aptID, err := uuid.Parse(id)
 				if err != nil {
-					return response.NewError(ErrInvalidID, http.StatusBadRequest)
+					return errs.New(errs.Unauthenticated, ErrInvalidID)
 				}
 
 				apt, err := aptCore.QueryByID(ctx, aptID)
 				if err != nil {
 					if errors.Is(err, appointment.ErrNotFound) {
-						return response.NewError(err, http.StatusNotFound)
+						return errs.New(errs.Unauthenticated, err)
 					}
 
-					return fmt.Errorf("querybyid: aptID[%s]: %w", aptID, err)
+					return errs.Newf(errs.Internal, "querybyid: aptID[%s]: %s", aptID, err)
 				}
 
 				userID = apt.UserID
@@ -130,10 +129,10 @@ func AuthorizeAppointment(log *logger.Logger, ath *auth.Auth, aptCore *appointme
 
 			claims := auth.GetClaims(ctx)
 			if err := ath.Authorize(ctx, claims, userID, auth.RuleAdminOrSubject); err != nil {
-				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
+				return errs.Newf(errs.Unauthenticated, "authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
 			}
 
-			return handler(ctx, w, r)
+			return next(ctx, r)
 		}
 
 		return h
@@ -142,34 +141,34 @@ func AuthorizeAppointment(log *logger.Logger, ath *auth.Auth, aptCore *appointme
 	return m
 }
 
-func AuthorizeGeneralAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.Core, bsnCore *business.Core) web.Middleware {
-	m := func(handler web.Handler) web.Handler {
+func AuthorizeGeneralAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.Core, bsnCore *business.Core) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
 
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			var userID uuid.UUID
 			id := web.Param(r, "agenda_id")
 
 			if id != "" {
 				agdID, err := uuid.Parse(id)
 				if err != nil {
-					return response.NewError(ErrInvalidID, http.StatusBadRequest)
+					return errs.New(errs.Unauthenticated, ErrInvalidID)
 				}
 
 				agd, err := agdCore.QueryGeneralAgendaByID(ctx, agdID)
 				if err != nil {
 					if errors.Is(err, agenda.ErrNotFound) {
-						return response.NewError(err, http.StatusNotFound)
+						return errs.New(errs.Unauthenticated, err)
 					}
 
-					return fmt.Errorf("querybyid: agdID[%s]: %w", agdID, err)
+					return errs.Newf(errs.Internal, "querybyid: agdID[%s]: %s", agdID, err)
 				}
 				bsn, err := bsnCore.QueryByID(ctx, agd.BusinessID)
 				if err != nil {
 					if errors.Is(err, business.ErrNotFound) {
-						return response.NewError(err, http.StatusNotFound)
+						return errs.New(errs.Unauthenticated, err)
 					}
 
-					return fmt.Errorf("querybyid: bsnID[%s]: %w", agd.BusinessID, err)
+					return errs.Newf(errs.Internal, "querybyid: bsnID[%s]: %s", agd.BusinessID, err)
 				}
 
 				userID = bsn.OwnerID
@@ -182,10 +181,10 @@ func AuthorizeGeneralAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.
 
 			claims := auth.GetClaims(ctx)
 			if err := ath.Authorize(ctx, claims, userID, auth.RuleAdminOrSubject); err != nil {
-				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
+				return errs.Newf(errs.Internal, "authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
 			}
 
-			return handler(ctx, w, r)
+			return next(ctx, r)
 		}
 
 		return h
@@ -194,34 +193,34 @@ func AuthorizeGeneralAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.
 	return m
 }
 
-func AuthorizeDailyAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.Core, bsnCore *business.Core) web.Middleware {
-	m := func(handler web.Handler) web.Handler {
+func AuthorizeDailyAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.Core, bsnCore *business.Core) web.MidFunc {
+	m := func(next web.HandlerFunc) web.HandlerFunc {
 
-		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, r *http.Request) web.Encoder {
 			var userID uuid.UUID
 			id := web.Param(r, "agenda_id")
 
 			if id != "" {
 				agdID, err := uuid.Parse(id)
 				if err != nil {
-					return response.NewError(ErrInvalidID, http.StatusBadRequest)
+					return errs.New(errs.Unauthenticated, ErrInvalidID)
 				}
 
 				agd, err := agdCore.QueryDailyAgendaByID(ctx, agdID)
 				if err != nil {
 					if errors.Is(err, agenda.ErrNotFound) {
-						return response.NewError(err, http.StatusNotFound)
+						return errs.New(errs.Unauthenticated, err)
 					}
 
-					return fmt.Errorf("querybyid: agdID[%s]: %w", agdID, err)
+					return errs.Newf(errs.Internal, "querybyid: agdID[%s]: %s", agdID, err)
 				}
 				bsn, err := bsnCore.QueryByID(ctx, agd.BusinessID)
 				if err != nil {
 					if errors.Is(err, business.ErrNotFound) {
-						return response.NewError(fmt.Errorf("you are not a business owner: %w", err), http.StatusNotFound)
+						return errs.Newf(errs.Unauthenticated, "you are not a business owner: %s", err)
 					}
 
-					return fmt.Errorf("querybyid: bsnID[%s]: %w", agd.BusinessID, err)
+					return errs.Newf(errs.Internal, "querybyid: bsnID[%s]: %s", agd.BusinessID, err)
 				}
 
 				userID = bsn.OwnerID
@@ -234,10 +233,10 @@ func AuthorizeDailyAgenda(log *logger.Logger, ath *auth.Auth, agdCore *agenda.Co
 
 			claims := auth.GetClaims(ctx)
 			if err := ath.Authorize(ctx, claims, userID, auth.RuleAdminOrSubject); err != nil {
-				return auth.NewAuthError("authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
+				return errs.Newf(errs.Unauthenticated, "authorize: you are not authorized for that action, claims[%v] rule[%v]: %s", claims.Roles, auth.RuleAdminOrSubject, err)
 			}
 
-			return handler(ctx, w, r)
+			return next(ctx, r)
 		}
 
 		return h

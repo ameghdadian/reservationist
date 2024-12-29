@@ -44,10 +44,10 @@ func Routes(app *web.App, cfg Config) {
 	ruleAuthorizeAppointment := mid.AuthorizeAppointment(cfg.Log, cfg.Auth, aptCore)
 	tran := mid.ExecuteInTransaction(cfg.Log, db.NewBeginner(cfg.DB))
 
-	hdl := New(aptCore, agdCore)
-	app.Handle(http.MethodGet, version, "/appointments", hdl.Query, authen, ruleAdminOnly)
-	app.Handle(http.MethodGet, version, "/appointments/{appointment_id}", hdl.QueryByID, authen, ruleAuthorizeAppointment)
-	app.Handle(http.MethodPost, version, "/appointments", hdl.Create, authen, tran)
-	app.Handle(http.MethodPut, version, "/appointments/{appointment_id}", hdl.Update, authen, tran, ruleAuthorizeAppointment)
-	app.Handle(http.MethodDelete, version, "/appointments/{appointment_id}", hdl.Delete, authen, tran, ruleAuthorizeAppointment)
+	hdl := newApp(aptCore, agdCore)
+	app.Handle(http.MethodGet, version, "/appointments", hdl.query, authen, ruleAdminOnly)
+	app.Handle(http.MethodGet, version, "/appointments/{appointment_id}", hdl.queryByID, authen, ruleAuthorizeAppointment)
+	app.Handle(http.MethodPost, version, "/appointments", hdl.create, authen, tran)
+	app.Handle(http.MethodPut, version, "/appointments/{appointment_id}", hdl.update, authen, tran, ruleAuthorizeAppointment)
+	app.Handle(http.MethodDelete, version, "/appointments/{appointment_id}", hdl.delete, authen, tran, ruleAuthorizeAppointment)
 }

@@ -2,10 +2,7 @@ package page
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
-
-	"github.com/ameghdadian/service/foundation/validate"
 )
 
 const (
@@ -13,39 +10,67 @@ const (
 )
 
 type Page struct {
-	Number      int
-	RowsPerPage int
+	number int
+	rows   int
 }
 
-func Parse(r *http.Request) (Page, error) {
-	values := r.URL.Query()
-
+func Parse(page string, rowsPerPage string) (Page, error) {
 	number := 1
-	if page := values.Get("page"); page != "" {
+	if page != "" {
 		var err error
 		number, err = strconv.Atoi(page)
 		if err != nil {
-			return Page{}, validate.NewFieldsError("page", err)
+			return Page{}, fmt.Errorf("page conversion: %w", err)
 		}
 	}
 
-	rowsPerPage := 10
-	if rows := values.Get("rows"); rows != "" {
+	rows := 10
+	if rowsPerPage != "" {
 		var err error
-		rowsPerPage, err = strconv.Atoi(rows)
+		rows, err = strconv.Atoi(rowsPerPage)
 		if err != nil {
-			return Page{}, validate.NewFieldsError("rows", err)
-		}
-		if rowsPerPage > maxRowsPerPage {
-			return Page{}, validate.NewFieldsError(
-				"rows",
-				fmt.Errorf("rows per page exceeded the limit: GOT: %d, MAX: %d", rowsPerPage, maxRowsPerPage),
-			)
+			return Page{}, fmt.Errorf("rows conversion: %w", err)
 		}
 	}
 
-	return Page{
-		Number:      number,
-		RowsPerPage: rowsPerPage,
-	}, nil
+	if number <= 0 {
+		return Page{}, fmt.Errorf("page value too small, must be larger than 0")
+	}
+
+	if rows <= 0 {
+		return Page{}, fmt.Errorf("rows value too small, must be grater than 0")
+	}
+
+	if rows > maxRowsPerPage {
+		return Page{}, fmt.Errorf("rows value too large, must be less than %d", maxRowsPerPage)
+	}
+
+	p := Page{
+		number: number,
+		rows:   rows,
+	}
+
+	return p, nil
+}
+
+// MustParse creates a paging value for testing.
+func MustParse(page string, rowsPerPage string) Page {
+	pg, err := Parse(page, rowsPerPage)
+	if err != nil {
+		panic(err)
+	}
+
+	return pg
+}
+
+func (p Page) String() string {
+	return fmt.Sprintf("page: %d rows: %d", p.number, p.rows)
+}
+
+func (p Page) Number() int {
+	return p.number
+}
+
+func (p Page) RowsPerPage() int {
+	return p.rows
 }

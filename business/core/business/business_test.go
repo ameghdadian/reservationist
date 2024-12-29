@@ -11,6 +11,7 @@ import (
 	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/dbtest"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/redistest"
 	"github.com/ameghdadian/service/foundation/docker"
 	"github.com/google/go-cmp/cmp"
@@ -49,7 +50,8 @@ func crud(t *testing.T) {
 		var filter user.QueryFilter
 		filter.WithName("Admin Gopher")
 
-		usrs, err := usrCore.Query(ctx, filter, user.DefaultOrderBy, 1, 1)
+		pagination := page.MustParse("1", "1")
+		usrs, err := usrCore.Query(ctx, filter, user.DefaultOrderBy, pagination)
 		if err != nil {
 			return nil, fmt.Errorf("seeding users: %w", err)
 		}

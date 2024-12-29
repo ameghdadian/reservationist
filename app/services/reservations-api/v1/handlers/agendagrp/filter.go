@@ -6,113 +6,147 @@ import (
 	"time"
 
 	"github.com/ameghdadian/service/business/core/agenda"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
 
-func parseGeneralAgendaFilter(r *http.Request) (agenda.GAQueryFilter, error) {
-	const (
-		filterByID         = "id"
-		filterByBusinessID = "business_id"
-	)
-
+func parseGeneralAgendaQueryParams(r *http.Request) (generalAgendaQueryParams, error) {
 	values := r.URL.Query()
-	var filter agenda.GAQueryFilter
 
-	if agdID := values.Get(filterByID); agdID != "" {
-		id, err := uuid.Parse(agdID)
-		if err != nil {
-			return agenda.GAQueryFilter{}, validate.NewFieldsError(filterByID, err)
-		}
-
-		filter.WithGenealAgendaID(id)
-	}
-
-	if bsnID := values.Get(filterByBusinessID); bsnID != "" {
-		id, err := uuid.Parse(bsnID)
-		if err != nil {
-			return agenda.GAQueryFilter{}, validate.NewFieldsError(filterByBusinessID, err)
-		}
-
-		filter.WithBusinessID(id)
-	}
-
-	if err := filter.Validate(); err != nil {
-		return agenda.GAQueryFilter{}, err
+	filter := generalAgendaQueryParams{
+		Page:       values.Get("page"),
+		Rows:       values.Get("rows"),
+		OrderBy:    values.Get("orderBy"),
+		ID:         values.Get("id"),
+		BusinessID: values.Get("business_id"),
 	}
 
 	return filter, nil
 }
 
-func parseDailyAgendaFilter(r *http.Request) (agenda.DAQueryFilter, error) {
-	const (
-		filterByID         = "id"
-		filterByBusinessID = "business_id"
-		filterByDate       = "date"
-		filterByFrom       = "from"
-		filterByTo         = "to"
-		filterByDays       = "days"
-	)
-
+func parseDailyAgendaQueryParams(r *http.Request) (dailyAgendaQueryParams, error) {
 	values := r.URL.Query()
-	var filter agenda.DAQueryFilter
 
-	if agdID := values.Get(filterByID); agdID != "" {
-		id, err := uuid.Parse(agdID)
-		if err != nil {
-			return agenda.DAQueryFilter{}, validate.NewFieldsError(filterByID, err)
-		}
-
-		filter.WithDailyAgendaID(id)
+	filter := dailyAgendaQueryParams{
+		Page:       values.Get("page"),
+		Rows:       values.Get("rows"),
+		OrderBy:    values.Get("orderBy"),
+		ID:         values.Get("id"),
+		BusinessID: values.Get("business_id"),
+		Date:       values.Get("date"),
+		From:       values.Get("from"),
+		To:         values.Get("to"),
+		Days:       values.Get("days"),
 	}
 
-	if bsnID := values.Get(filterByBusinessID); bsnID != "" {
-		id, err := uuid.Parse(bsnID)
-		if err != nil {
-			return agenda.DAQueryFilter{}, validate.NewFieldsError(filterByBusinessID, err)
-		}
+	return filter, nil
+}
 
-		filter.WithBusinessID(id)
+func parseGeneralAgendaFilter(qp generalAgendaQueryParams) (agenda.GAQueryFilter, error) {
+	var fieldErrors errs.FieldErrors
+	var filter agenda.GAQueryFilter
+
+	if qp.ID != "" {
+		id, err := uuid.Parse(qp.ID)
+		switch err {
+		case nil:
+			filter.WithGenealAgendaID(id)
+		default:
+			fieldErrors.Add("id", err)
+		}
 	}
 
-	if date := values.Get(filterByDate); date != "" {
-		d, err := time.Parse(time.DateOnly, date)
-		if err != nil {
-			return agenda.DAQueryFilter{}, validate.NewFieldsError(filterByDate, err)
+	if qp.BusinessID != "" {
+		id, err := uuid.Parse(qp.BusinessID)
+		switch err {
+		case nil:
+			filter.WithBusinessID(id)
+		default:
+			fieldErrors.Add("business_id", err)
 		}
-
-		filter.WithDate(d.Format(time.DateOnly))
-	}
-
-	if from := values.Get(filterByFrom); from != "" {
-		f, err := time.Parse(time.DateOnly, from)
-		if err != nil {
-			return agenda.DAQueryFilter{}, validate.NewFieldsError(filterByFrom, err)
-		}
-
-		filter.WithFrom(f.Format(time.DateOnly))
-	}
-
-	if to := values.Get(filterByTo); to != "" {
-		t, err := time.Parse(time.DateOnly, to)
-		if err != nil {
-			return agenda.DAQueryFilter{}, validate.NewFieldsError(filterByTo, err)
-		}
-
-		filter.WithTo(t.Format(time.DateOnly))
-	}
-
-	if days := values.Get(filterByDays); days != "" {
-		d, err := strconv.Atoi(days)
-		if err != nil {
-			return agenda.DAQueryFilter{}, validate.NewFieldsError(filterByDays, err)
-		}
-
-		filter.WithDays(d)
 	}
 
 	if err := filter.Validate(); err != nil {
-		return agenda.DAQueryFilter{}, err
+		fieldErrors.Add("filter validation", err)
+	}
+
+	if fieldErrors != nil {
+		return agenda.GAQueryFilter{}, fieldErrors.ToError()
+	}
+
+	return filter, nil
+}
+
+func parseDailyAgendaFilter(qp dailyAgendaQueryParams) (agenda.DAQueryFilter, error) {
+	var fieldErrors errs.FieldErrors
+	var filter agenda.DAQueryFilter
+
+	if qp.ID != "" {
+		id, err := uuid.Parse(qp.ID)
+		switch err {
+		case nil:
+			filter.WithDailyAgendaID(id)
+		default:
+			fieldErrors.Add("id", err)
+		}
+	}
+
+	if qp.BusinessID != "" {
+		id, err := uuid.Parse(qp.BusinessID)
+		switch err {
+		case nil:
+			filter.WithBusinessID(id)
+		default:
+			fieldErrors.Add("business_id", err)
+		}
+	}
+
+	if qp.Date != "" {
+		d, err := time.Parse(time.DateOnly, qp.Date)
+		switch err {
+		case nil:
+			filter.WithDate(d.Format(time.DateOnly))
+		default:
+			fieldErrors.Add("date", err)
+		}
+	}
+
+	if qp.From != "" {
+		f, err := time.Parse(time.DateOnly, qp.From)
+		switch err {
+		case nil:
+			filter.WithFrom(f.Format(time.DateOnly))
+		default:
+			fieldErrors.Add("from", err)
+		}
+	}
+
+	if qp.To != "" {
+		t, err := time.Parse(time.DateOnly, qp.To)
+		switch err {
+		case nil:
+			filter.WithTo(t.Format(time.DateOnly))
+		default:
+			fieldErrors.Add("to", err)
+		}
+	}
+
+	if qp.Days != "" {
+		d, err := strconv.Atoi(qp.Days)
+		switch err {
+		case nil:
+			filter.WithDays(d)
+		default:
+			fieldErrors.Add("days", err)
+		}
+	}
+
+	if err := filter.Validate(); err != nil {
+		return agenda.DAQueryFilter{}, errs.NewFieldErrors("filter validation", err)
+	}
+
+	if fieldErrors != nil {
+		return agenda.DAQueryFilter{}, fieldErrors.ToError()
 	}
 
 	return filter, nil

@@ -5,83 +5,110 @@ import (
 	"time"
 
 	"github.com/ameghdadian/service/business/core/appointment"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
 
-func parseFilter(r *http.Request) (appointment.QueryFilter, error) {
-	const (
-		filterByID               = "appointment_id"
-		filterByBusinessID       = "business_id"
-		filterByUserID           = "user_id"
-		filterByStatus           = "status"
-		filterByScheduledOn      = "scheduled_on"
-		filterByStartCreatedDate = "start_created_date"
-		filterByEndCreatedDate   = "end_created_date"
-	)
-
+func parseQueryParams(r *http.Request) (queryParams, error) {
 	values := r.URL.Query()
 
+	filter := queryParams{
+		Page:             values.Get("page"),
+		Rows:             values.Get("rows"),
+		OrderBy:          values.Get("order"),
+		ID:               values.Get("appointment_id"),
+		BusinessID:       values.Get("business_id"),
+		UserID:           values.Get("user_id"),
+		Status:           values.Get("status"),
+		ScheduledOn:      values.Get("scheduled_on"),
+		StartCreatedDate: values.Get("start_created_date"),
+		EndCreatedDate:   values.Get("end_created_date"),
+	}
+
+	return filter, nil
+}
+
+func parseFilter(qp queryParams) (appointment.QueryFilter, error) {
+	var fieldErrors errs.FieldErrors
 	var filter appointment.QueryFilter
 
-	if aptID := values.Get(filterByID); aptID != "" {
-		id, err := uuid.Parse(aptID)
-		if err != nil {
-			return appointment.QueryFilter{}, validate.NewFieldsError(filterByID, err)
+	if qp.ID != "" {
+		id, err := uuid.Parse(qp.ID)
+		switch err {
+		case nil:
+			filter.WithAppointmentID(id)
+		default:
+			fieldErrors.Add("appointment_id", err)
 		}
-		filter.WithAppointmentID(id)
 	}
 
-	if bsnID := values.Get(filterByBusinessID); bsnID != "" {
-		id, err := uuid.Parse(bsnID)
-		if err != nil {
-			return appointment.QueryFilter{}, validate.NewFieldsError(filterByBusinessID, err)
+	if qp.BusinessID != "" {
+		id, err := uuid.Parse(qp.BusinessID)
+		switch err {
+		case nil:
+			filter.WithBusinessID(id)
+		default:
+			fieldErrors.Add("business_id", err)
 		}
-		filter.WithBusinessID(id)
 	}
 
-	if usrID := values.Get(filterByUserID); usrID != "" {
-		id, err := uuid.Parse(usrID)
-		if err != nil {
-			return appointment.QueryFilter{}, validate.NewFieldsError(filterByUserID, err)
+	if qp.UserID != "" {
+		id, err := uuid.Parse(qp.UserID)
+		switch err {
+		case nil:
+
+			filter.WithUserID(id)
+		default:
+			fieldErrors.Add("user_id", err)
 		}
-		filter.WithUserID(id)
 	}
 
-	if status := values.Get(filterByStatus); status != "" {
-		st, err := appointment.ParseStatus(status)
-		if err != nil {
-			return appointment.QueryFilter{}, validate.NewFieldsError(filterByStatus, err)
+	if qp.Status != "" {
+		st, err := appointment.ParseStatus(qp.Status)
+		switch err {
+		case nil:
+			filter.WithStatus(st)
+		default:
+			fieldErrors.Add("status", err)
 		}
-		filter.WithStatus(st)
 	}
 
-	if sch := values.Get(filterByScheduledOn); sch != "" {
-		t, err := time.Parse(time.RFC3339, sch)
-		if err != nil {
-			return appointment.QueryFilter{}, validate.NewFieldsError(filterByScheduledOn, err)
+	if qp.ScheduledOn != "" {
+		t, err := time.Parse(time.RFC3339, qp.ScheduledOn)
+		switch err {
+		case nil:
+			filter.WithScheduledOn(t)
+		default:
+			fieldErrors.Add("scheduled_on", err)
 		}
-		filter.WithScheduledOn(t)
 	}
 
-	if startDate := values.Get(filterByStartCreatedDate); startDate != "" {
-		t, err := time.Parse(time.RFC3339, startDate)
-		if err != nil {
-			return appointment.QueryFilter{}, validate.NewFieldsError(filterByStartCreatedDate, err)
+	if qp.StartCreatedDate != "" {
+		t, err := time.Parse(time.RFC3339, qp.StartCreatedDate)
+		switch err {
+		case nil:
+			filter.WithStartCreatedDate(t)
+		default:
+			fieldErrors.Add("start_created_date", err)
 		}
-		filter.WithStartCreatedDate(t)
 	}
 
-	if endDate := values.Get(filterByEndCreatedDate); endDate != "" {
-		t, err := time.Parse(time.RFC3339, endDate)
-		if err != nil {
-			return appointment.QueryFilter{}, validate.NewFieldsError(filterByEndCreatedDate, err)
+	if qp.EndCreatedDate != "" {
+		t, err := time.Parse(time.RFC3339, qp.EndCreatedDate)
+		switch err {
+		case nil:
+			filter.WithStartCreatedDate(t)
+		default:
+			fieldErrors.Add("end_created_date", err)
 		}
-		filter.WithStartCreatedDate(t)
 	}
 
 	if err := filter.Validate(); err != nil {
-		return appointment.QueryFilter{}, err
+		fieldErrors.Add("filter validation", err)
+	}
+
+	if fieldErrors != nil {
+		return appointment.QueryFilter{}, fieldErrors.ToError()
 	}
 
 	return filter, nil

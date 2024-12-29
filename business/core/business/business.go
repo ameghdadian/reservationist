@@ -8,6 +8,7 @@ import (
 
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ type Storer interface {
 	Create(ctx context.Context, b Business) error
 	Update(ctx context.Context, b Business) error
 	Delete(ctx context.Context, b Business) error
-	Query(ctx context.Context, filter QueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]Business, error)
+	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Business, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, bsnID uuid.UUID) (Business, error)
 	QueryByOwnerID(ctx context.Context, owrID uuid.UUID) ([]Business, error)
@@ -117,8 +118,8 @@ func (c *Core) Delete(ctx context.Context, b Business) error {
 	return nil
 }
 
-func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, pageNumber int, rowsPerPage int) ([]Business, error) {
-	bsns, err := c.storer.Query(ctx, filter, orderBy, pageNumber, rowsPerPage)
+func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Business, error) {
+	bsns, err := c.storer.Query(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}

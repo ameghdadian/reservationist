@@ -5,7 +5,7 @@ import (
 	"net/mail"
 	"time"
 
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
 
@@ -20,7 +20,7 @@ type QueryFilter struct {
 
 // Validate checks the data in the model is considered clean.
 func (qf *QueryFilter) Validate() error {
-	if err := validate.Check(qf); err != nil {
+	if err := errs.Check(qf); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 

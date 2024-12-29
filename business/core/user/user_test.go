@@ -12,6 +12,7 @@ import (
 	"github.com/ameghdadian/service/business/core/user"
 	"github.com/ameghdadian/service/business/data/dbtest"
 	"github.com/ameghdadian/service/business/data/order"
+	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/redistest"
 	"github.com/ameghdadian/service/foundation/docker"
 	"github.com/google/go-cmp/cmp"
@@ -50,7 +51,7 @@ func Test_User(t *testing.T) {
 func crud(t *testing.T) {
 	// Used to seed database with whatever seed data that we might need
 	seed := func(ctx context.Context, usrCore *user.Core) ([]user.User, error) {
-		usrs, err := usrCore.Query(ctx, user.QueryFilter{}, order.By{Field: user.OrderByName, Direction: order.ASC}, 1, 1)
+		usrs, err := usrCore.Query(ctx, user.QueryFilter{}, order.By{Field: user.OrderByName, Direction: order.ASC}, page.MustParse("1", "1"))
 		if err != nil {
 			return nil, fmt.Errorf("seeding users: %w", err)
 		}
@@ -58,7 +59,7 @@ func crud(t *testing.T) {
 	}
 
 	allUsersSeed := func(ctx context.Context, usrCore *user.Core) ([]user.User, error) {
-		usrs, err := usrCore.Query(ctx, user.QueryFilter{}, order.By{Field: user.OrderByName, Direction: order.ASC}, 1, 2)
+		usrs, err := usrCore.Query(ctx, user.QueryFilter{}, order.By{Field: user.OrderByName, Direction: order.ASC}, page.MustParse("1", "2"))
 		if err != nil {
 			return nil, fmt.Errorf("seeding users: %w", err)
 		}

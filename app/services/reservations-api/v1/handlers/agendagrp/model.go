@@ -1,14 +1,37 @@
 package agendagrp
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/ameghdadian/service/business/core/agenda"
-	"github.com/ameghdadian/service/foundation/validate"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
 )
+
+type generalAgendaQueryParams struct {
+	Page       string
+	Rows       string
+	OrderBy    string
+	ID         string
+	BusinessID string
+}
+
+type dailyAgendaQueryParams struct {
+	Page       string
+	Rows       string
+	OrderBy    string
+	ID         string
+	BusinessID string
+	Date       string
+	From       string
+	To         string
+	Days       string
+}
+
+// ============================================================
 
 type AppGeneralAgenda struct {
 	ID          string `json:"id"`
@@ -19,6 +42,11 @@ type AppGeneralAgenda struct {
 	WorkingDays []int  `json:"working_days"`
 	DateCreated string `json:"-"`
 	DateUpdated string `json:"-"`
+}
+
+func (aa AppGeneralAgenda) Encode() ([]byte, string, error) {
+	data, err := json.Marshal(aa)
+	return data, "application/json", err
 }
 
 func toAppGeneralAgenda(agd agenda.GeneralAgenda) AppGeneralAgenda {
@@ -59,7 +87,7 @@ type AppNewGeneralAgenda struct {
 }
 
 func (app AppNewGeneralAgenda) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
@@ -121,7 +149,7 @@ type AppUpdateGeneralAgenda struct {
 }
 
 func (app AppUpdateGeneralAgenda) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return err
 	}
 
@@ -187,6 +215,11 @@ type AppDailyAgenda struct {
 	DateUpdated  string `json:"-"`
 }
 
+func (aa AppDailyAgenda) Encode() ([]byte, string, error) {
+	data, err := json.Marshal(aa)
+	return data, "application/json", err
+}
+
 func toAppDailyAgenda(agd agenda.DailyAgenda) AppDailyAgenda {
 	return AppDailyAgenda{
 		ID:           agd.ID.String(),
@@ -222,7 +255,7 @@ type AppNewDailyAgenda struct {
 }
 
 func (app AppNewDailyAgenda) Validate() error {
-	if err := validate.Check(app); err != nil {
+	if err := errs.Check(app); err != nil {
 		return err
 	}
 

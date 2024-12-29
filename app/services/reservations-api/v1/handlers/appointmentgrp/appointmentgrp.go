@@ -3,15 +3,16 @@ package appointmentgrp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/ameghdadian/service/business/core/agenda"
 	"github.com/ameghdadian/service/business/core/appointment"
+	"github.com/ameghdadian/service/business/data/order"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/business/web/v1/mid"
 	"github.com/ameghdadian/service/business/web/v1/response"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/google/uuid"
 )
@@ -20,19 +21,19 @@ var (
 	ErrInvalidID = errors.New("ID is not in its proper format")
 )
 
-type Handlers struct {
+type handlers struct {
 	aptCore *appointment.Core
 	agdCore *agenda.Core
 }
 
-func New(aptCore *appointment.Core, agdCore *agenda.Core) *Handlers {
-	return &Handlers{
+func newApp(aptCore *appointment.Core, agdCore *agenda.Core) *handlers {
+	return &handlers{
 		aptCore: aptCore,
 		agdCore: agdCore,
 	}
 }
 
-func (h *Handlers) executeUnderTransaction(ctx context.Context) (*Handlers, error) {
+func (h *handlers) executeUnderTransaction(ctx context.Context) (*handlers, error) {
 	if tx, ok := transaction.Get(ctx); ok {
 		aptCore, err := h.aptCore.ExecuteUnderTransaction(tx)
 		if err != nil {
@@ -43,7 +44,7 @@ func (h *Handlers) executeUnderTransaction(ctx context.Context) (*Handlers, erro
 			return nil, err
 		}
 
-		h = &Handlers{
+		h = &handlers{
 			aptCore: aptCore,
 			agdCore: agdCore,
 		}
@@ -54,138 +55,145 @@ func (h *Handlers) executeUnderTransaction(ctx context.Context) (*Handlers, erro
 	return h, nil
 }
 
-func (h *Handlers) Create(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *handlers) create(ctx context.Context, r *http.Request) web.Encoder {
 	h, err := h.executeUnderTransaction(ctx)
 	if err != nil {
-		return err
+		return errs.New(errs.Internal, err)
 	}
 
 	var app AppNewAppointment
 	if err := web.Decode(r, &app); err != nil {
-		return response.NewError(err, http.StatusBadRequest)
+		return errs.New(errs.InvalidArgument, err)
 	}
 
 	na, err := toCoreNewAppointment(app)
 	if err != nil {
-		return response.NewError(err, http.StatusBadRequest)
+		return errs.New(errs.InvalidArgument, err)
 	}
 
+	// Check whether appointment conforms with daily agenda.
 	err = h.agdCore.ConformDailyAgendaBoundary(ctx, na.BusinessID, na.ScheduledOn)
 	if err != nil {
 		if errors.Is(err, agenda.ErrNoDailyAgenda) {
+			// If doesn't conform with daily agenda, check with the general agenda to see any match.
 			if err = h.agdCore.ConformGeneralAgendaBoundary(ctx, na.BusinessID, na.ScheduledOn); err != nil {
-				return response.NewError(err, http.StatusBadRequest)
+				return errs.New(errs.InvalidArgument, err)
 			}
 		} else {
-			return response.NewError(err, http.StatusBadRequest)
+			return errs.New(errs.InvalidArgument, err)
 		}
 	}
 
 	apt, err := h.aptCore.Create(ctx, na)
 	if err != nil {
-		return fmt.Errorf("create: app[%+v]: %w", app, err)
+		return errs.Newf(errs.Internal, "create: app[%+v]: %s", app, err)
 	}
 
-	return web.Respond(ctx, w, toAppAppointment(apt), http.StatusCreated)
+	return toAppAppointment(apt)
 }
 
-func (h *Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *handlers) update(ctx context.Context, r *http.Request) web.Encoder {
 	h, err := h.executeUnderTransaction(ctx)
 	if err != nil {
-		return err
+		return errs.New(errs.Internal, err)
 	}
 
 	var app AppUpdateAppointment
 	if err := web.Decode(r, &app); err != nil {
-		return response.NewError(err, http.StatusBadRequest)
+		return errs.New(errs.InvalidArgument, err)
 	}
 
 	aptID, err := uuid.Parse(web.Param(r, "appointment_id"))
 	if err != nil {
-		return response.NewError(ErrInvalidID, http.StatusBadRequest)
+		return errs.New(errs.InvalidArgument, ErrInvalidID)
 	}
 
 	apt, err := mid.GetAppointment(ctx)
 	if err != nil {
-		return fmt.Errorf("appointment missing in context: %w", err)
+		return errs.Newf(errs.Internal, "appointment missing in context: %s", err)
 	}
 
 	uapt, err := toCoreUpdateAppointment(app)
 	if err != nil {
-		return response.NewError(err, http.StatusBadRequest)
+		return errs.New(errs.InvalidArgument, err)
 	}
 
 	apt, err = h.aptCore.Update(ctx, apt, uapt)
 	if err != nil {
-		return fmt.Errorf("update: appointmentID[%s] uapt[%+v]: %w", aptID, uapt, err)
+		return errs.Newf(errs.Internal, "update: appointmentID[%s] uapt[%+v]: %s", aptID, uapt, err)
 	}
 
-	return web.Respond(ctx, w, toAppAppointment(apt), http.StatusOK)
+	return toAppAppointment(apt)
 }
 
-func (h *Handlers) Delete(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *handlers) delete(ctx context.Context, r *http.Request) web.Encoder {
 	h, err := h.executeUnderTransaction(ctx)
 	if err != nil {
-		return err
+		return errs.New(errs.Internal, err)
 	}
 
 	aptID, err := uuid.Parse(web.Param(r, "appointment_id"))
 	if err != nil {
-		return response.NewError(ErrInvalidID, http.StatusBadRequest)
+		return errs.New(errs.InvalidArgument, ErrInvalidID)
 	}
 
 	apt, err := mid.GetAppointment(ctx)
 	if err != nil {
-		return fmt.Errorf("appointment missing in context: %w", err)
+		return errs.Newf(errs.Internal, "appointment missing in context: %s", err)
 	}
 
 	if err := h.aptCore.Delete(ctx, apt); err != nil {
-		return fmt.Errorf("delete: appointmentID[%s]: %w", aptID, err)
+		return errs.Newf(errs.Internal, "delete: appointmentID[%s]: %s", aptID, err)
 	}
 
-	return web.Respond(ctx, w, nil, http.StatusNoContent)
+	return nil
 }
 
-func (h *Handlers) Query(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	page, err := page.Parse(r)
+func (h *handlers) query(ctx context.Context, r *http.Request) web.Encoder {
+	qp, err := parseQueryParams(r)
 	if err != nil {
-		return err
+		return errs.New(errs.InvalidArgument, err)
 	}
 
-	filter, err := parseFilter(r)
+	page, err := page.Parse(qp.Page, qp.Rows)
 	if err != nil {
-		return err
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	filter, err := parseFilter(qp)
+	if err != nil {
+		return err.(*errs.Error)
 	}
 
 	// TODO: What's the returned status when a Field validation error occurs?
-	orderBy, err := parseOrder(r)
+	orderBy, err := order.Parse(orderByFields, qp.OrderBy, appointment.DefaultOrderBy)
 	if err != nil {
-		return err
+		return errs.NewFieldErrors("order", err)
 	}
 
-	apts, err := h.aptCore.Query(ctx, filter, orderBy, page.Number, page.RowsPerPage)
+	apts, err := h.aptCore.Query(ctx, filter, orderBy, page)
 	if err != nil {
-		return fmt.Errorf("query: %w", err)
+		return errs.Newf(errs.Internal, "query: %s", err)
 	}
 
 	total, err := h.aptCore.Count(ctx, filter)
 	if err != nil {
-		return fmt.Errorf("count: %w", err)
+		return errs.Newf(errs.Internal, "count: %s", err)
 	}
 
-	return web.Respond(ctx, w, response.NewPageDocument(toAppAppointments(apts), total, page.Number, page.RowsPerPage), http.StatusOK)
+	return response.NewPageDocument(toAppAppointments(apts), total, page)
 }
 
-func (h *Handlers) QueryByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *handlers) queryByID(ctx context.Context, r *http.Request) web.Encoder {
 	_, err := uuid.Parse(web.Param(r, "appointment_id"))
 	if err != nil {
-		return response.NewError(ErrInvalidID, http.StatusBadRequest)
+		return errs.New(errs.InvalidArgument, ErrInvalidID)
 	}
 
 	apt, err := mid.GetAppointment(ctx)
 	if err != nil {
-		return fmt.Errorf("appointment missing in context: %w", err)
+		return errs.Newf(errs.Internal, "appointment missing in context: %s", err)
 	}
 
-	return web.Respond(ctx, w, toAppAppointment(apt), http.StatusOK)
+	return toAppAppointment(apt)
 }
