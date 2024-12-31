@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Encoder defines behaviour that can encode a data model and provide the
@@ -25,14 +28,16 @@ type HandlerFunc func(ctx context.Context, r *http.Request) Encoder
 
 type Logger func(ctx context.Context, msg string, args ...any)
 type App struct {
-	log Logger
+	log    Logger
+	tracer trace.Tracer
 	*http.ServeMux
 	mw []MidFunc
 }
 
-func NewApp(log Logger, mw ...MidFunc) *App {
+func NewApp(log Logger, tracer trace.Tracer, mw ...MidFunc) *App {
 	return &App{
 		log:      log,
+		tracer:   tracer,
 		ServeMux: http.NewServeMux(),
 		mw:       mw,
 	}
@@ -52,12 +57,16 @@ func (a *App) Handle(method string, group string, path string, handler HandlerFu
 func (a *App) handle(method string, group string, path string, handler HandlerFunc) {
 
 	h := func(w http.ResponseWriter, r *http.Request) {
+		ctx := setTracer(r.Context(), a.tracer)
+		ctx = setWriter(ctx, w)
+
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(w.Header()))
 
 		v := Values{
 			TraceID: uuid.NewString(),
 			Now:     time.Now().UTC(),
 		}
-		ctx := SetValues(r.Context(), &v)
+		ctx = SetValues(ctx, &v)
 
 		resp := handler(ctx, r)
 		if err := Respond(ctx, w, r, resp); err != nil {

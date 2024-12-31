@@ -9,6 +9,7 @@ import (
 	"github.com/ameghdadian/service/foundation/web"
 	"github.com/hibiken/asynq"
 	"github.com/jmoiron/sqlx"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type APIMuxConfig struct {
@@ -16,6 +17,7 @@ type APIMuxConfig struct {
 	Log           *logger.Logger
 	Auth          *auth.Auth
 	DB            *sqlx.DB
+	Tracer        trace.Tracer
 	TaskClient    *asynq.Client
 	TaskInspector *asynq.Inspector
 }
@@ -30,6 +32,8 @@ func APIMux(cfg APIMuxConfig, routeAdder RouterAdder) *web.App {
 	}
 	app := web.NewApp(
 		logger,
+		cfg.Tracer,
+		mid.Otel(cfg.Tracer),
 		mid.Logger(cfg.Log),
 		mid.Errors(cfg.Log),
 		mid.Metrics(),

@@ -1,5 +1,5 @@
 # Build the Go Binary.
-FROM golang:1.22.4 AS build_reservations-api
+FROM golang:1.22.7 AS build_reservations-api
 ENV CGO_ENABLED=0
 ARG BUILD_REF
 

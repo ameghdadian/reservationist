@@ -39,11 +39,16 @@ curl-create:
 # =============================================================================
 # Define dependencies
 
-GOLANG 			:= golang:1.22.4
+GOLANG 			:= golang:1.22.7
 ALPINE 			:= alpine:3.18
 KIND 			:= kindest/node:v1.30.0
 POSTGRES 		:= postgres:15.4
 REDIS 			:= redis:7.4.0
+GRAFANA 		:= grafana/grafana:11.3.0
+PROMETHEUS 		:= prom/prometheus:v2.55.0
+TEMPO 			:= grafana/tempo:2.6.0
+LOKI 			:= grafana/loki:3.2.0
+PROMTAIL 		:= grafana/promtail:3.2.0
 
 KIND_CLUSTER 	:= local-cluster
 NAMESPACE 		:= reservations-system
@@ -64,12 +69,17 @@ WORKER_IMAGE 	:= $(BASE_IMAGE_NAME)/$(WORKER_NAME):$(VERSION)
 # Install dependencies
 
 dev-docker:
-	docker pull $(GOLANG)
-	docker pull $(ALPINE)
-	docker pull $(KIND)
-	docker pull $(POSTGRES)
-	docker pull $(REDIS)
-
+	docker pull $(GOLANG) & \
+	docker pull $(ALPINE) & \
+	docker pull $(KIND) & \
+	docker pull $(POSTGRES) & \
+	docker pull $(REDIS) & \
+	docker pull $(GRAFANA) & \
+	docker pull $(PROMETHEUS) & \
+	docker pull $(TEMPO) & \
+	docker pull $(LOKI) & \
+	docker pull $(PROMTAIL) & \
+	wait;
 
 # =============================================================================
 # Building containers

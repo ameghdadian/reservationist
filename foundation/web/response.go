@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type NoResponse struct{}
@@ -55,6 +57,9 @@ func Respond(ctx context.Context, w http.ResponseWriter, r *http.Request, dataMo
 			statusCode = http.StatusNoContent
 		}
 	}
+
+	_, span := addSpan(ctx, "web.send.response", attribute.Int("status", statusCode))
+	defer span.End()
 
 	SetStatusCode(ctx, statusCode)
 
