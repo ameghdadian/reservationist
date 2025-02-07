@@ -38,6 +38,8 @@ func (h *handlers) readiness(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.Internal, err)
 	}
 
+	// TODO: Add redis status check here.
+
 	return nil
 }
 

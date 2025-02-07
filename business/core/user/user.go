@@ -11,6 +11,7 @@ import (
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
+	"github.com/ameghdadian/service/foundation/otel"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -60,6 +61,9 @@ func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error
 }
 
 func (c *Core) Create(ctx context.Context, nu NewUser) (User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.create")
+	defer span.End()
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(nu.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return User{}, fmt.Errorf("generatefrompassword: %w", err)
@@ -87,6 +91,9 @@ func (c *Core) Create(ctx context.Context, nu NewUser) (User, error) {
 }
 
 func (c *Core) Update(ctx context.Context, usr User, uu UpdateUser) (User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.update")
+	defer span.End()
+
 	if uu.Name != nil {
 		usr.Name = *uu.Name
 	}
@@ -121,6 +128,9 @@ func (c *Core) Update(ctx context.Context, usr User, uu UpdateUser) (User, error
 }
 
 func (c *Core) Delete(ctx context.Context, usr User) error {
+	ctx, span := otel.AddSpan(ctx, "business.user.delete")
+	defer span.End()
+
 	if err := c.storer.Delete(ctx, usr); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
@@ -129,6 +139,9 @@ func (c *Core) Delete(ctx context.Context, usr User) error {
 }
 
 func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.query")
+	defer span.End()
+
 	users, err := c.storer.Query(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
@@ -138,10 +151,16 @@ func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, 
 }
 
 func (c *Core) Count(ctx context.Context, filter QueryFilter) (int, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.count")
+	defer span.End()
+
 	return c.storer.Count(ctx, filter)
 }
 
 func (c *Core) QueryByID(ctx context.Context, userID uuid.UUID) (User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.querybyid")
+	defer span.End()
+
 	user, err := c.storer.QueryByID(ctx, userID)
 	if err != nil {
 		return User{}, fmt.Errorf("query: userID[%s]: %w", userID, err)
@@ -151,6 +170,9 @@ func (c *Core) QueryByID(ctx context.Context, userID uuid.UUID) (User, error) {
 }
 
 func (c *Core) QueryByIDs(ctx context.Context, userID []uuid.UUID) ([]User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.querybyids")
+	defer span.End()
+
 	usrs, err := c.storer.QueryByIDs(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("querybyids: ids[%q]: %w", userID, err)
@@ -160,6 +182,9 @@ func (c *Core) QueryByIDs(ctx context.Context, userID []uuid.UUID) ([]User, erro
 }
 
 func (c *Core) QueryByEmail(ctx context.Context, email mail.Address) (User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.querybyemail")
+	defer span.End()
+
 	user, err := c.storer.QueryByEmail(ctx, email)
 	if err != nil {
 		return User{}, fmt.Errorf("query: email[%s']: %w", email, err)
@@ -169,6 +194,9 @@ func (c *Core) QueryByEmail(ctx context.Context, email mail.Address) (User, erro
 }
 
 func (c *Core) Authenticate(ctx context.Context, email mail.Address, pass string) (User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.user.authenticate")
+	defer span.End()
+
 	usr, err := c.storer.QueryByEmail(ctx, email)
 	if err != nil {
 		return User{}, fmt.Errorf("query: email[%s]: %w", email, err)

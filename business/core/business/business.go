@@ -11,6 +11,7 @@ import (
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
+	"github.com/ameghdadian/service/foundation/otel"
 	"github.com/google/uuid"
 )
 
@@ -65,6 +66,9 @@ func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error
 }
 
 func (c *Core) Create(ctx context.Context, nb NewBusiness) (Business, error) {
+	ctx, span := otel.AddSpan(ctx, "business.business.create")
+	defer span.End()
+
 	usr, err := c.usrCore.QueryByID(ctx, nb.OwnerID)
 	if err != nil {
 		return Business{}, fmt.Errorf("user.querybyid: %s: %w", nb.OwnerID, err)
@@ -93,6 +97,9 @@ func (c *Core) Create(ctx context.Context, nb NewBusiness) (Business, error) {
 }
 
 func (c *Core) Update(ctx context.Context, b Business, ub UpdateBusiness) (Business, error) {
+	ctx, span := otel.AddSpan(ctx, "business.business.update")
+	defer span.End()
+
 	if ub.Name != nil {
 		b.Name = *ub.Name
 	}
@@ -111,6 +118,9 @@ func (c *Core) Update(ctx context.Context, b Business, ub UpdateBusiness) (Busin
 }
 
 func (c *Core) Delete(ctx context.Context, b Business) error {
+	ctx, span := otel.AddSpan(ctx, "business.business.delete")
+	defer span.End()
+
 	if err := c.storer.Delete(ctx, b); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
@@ -119,6 +129,9 @@ func (c *Core) Delete(ctx context.Context, b Business) error {
 }
 
 func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Business, error) {
+	ctx, span := otel.AddSpan(ctx, "business.business.query")
+	defer span.End()
+
 	bsns, err := c.storer.Query(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
@@ -128,10 +141,16 @@ func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, 
 }
 
 func (c *Core) Count(ctx context.Context, filter QueryFilter) (int, error) {
+	ctx, span := otel.AddSpan(ctx, "business.business.count")
+	defer span.End()
+
 	return c.storer.Count(ctx, filter)
 }
 
 func (c *Core) QueryByID(ctx context.Context, bsnID uuid.UUID) (Business, error) {
+	ctx, span := otel.AddSpan(ctx, "business.business.querybyid")
+	defer span.End()
+
 	bsn, err := c.storer.QueryByID(ctx, bsnID)
 	if err != nil {
 		return Business{}, fmt.Errorf("query: businessID[%s]: %w", bsnID, err)
@@ -141,6 +160,9 @@ func (c *Core) QueryByID(ctx context.Context, bsnID uuid.UUID) (Business, error)
 }
 
 func (c *Core) QueryByOwnerID(ctx context.Context, owrID uuid.UUID) ([]Business, error) {
+	ctx, span := otel.AddSpan(ctx, "business.business.querybyownerid")
+	defer span.End()
+
 	bsns, err := c.storer.QueryByOwnerID(ctx, owrID)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)

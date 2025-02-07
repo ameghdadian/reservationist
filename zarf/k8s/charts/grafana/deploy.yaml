@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: reservations-system
+  labels:
+    app: grafana
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 0
+  template:
+    metadata:
+      namespace: reservations-system
+      labels:
+        app: grafana
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.3.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: 'false'
+            - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+              value: 'false'
+            - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
+              value: 'false'
+            - name: GF_FEATURE_TOGGLES_ENABLE
+              value: 'traceqlEditor'
+            - name: GF_SERVER_HTTP_PORT
+              value: '3100'
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: 'true'
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: 'true'
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: 'Admin'
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: "/etc/dashboards/reservations.json"
+          ports:
+            - containerPort: 3100
+              name: http-grafana
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /robots.txt
+              port: http-grafana
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 2
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: http-grafana
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 100m
+            limits:
+              cpu: 3400m
+          volumeMounts:
+            - name: config-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: config-dashboards
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /etc/dashboards
+      volumes:
+        - name: config-datasources
+          configMap:
+            name: grafana-conf-datasources
+        - name: config-dashboards
+          configMap:
+            name: grafana-conf-dashboards
+        - name: dashboards
+          configMap:
+            name: grafana-dashboards
+          

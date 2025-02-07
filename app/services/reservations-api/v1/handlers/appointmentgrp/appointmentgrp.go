@@ -72,16 +72,8 @@ func (h *handlers) create(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	// Check whether appointment conforms with daily agenda.
-	err = h.agdCore.ConformDailyAgendaBoundary(ctx, na.BusinessID, na.ScheduledOn)
-	if err != nil {
-		if errors.Is(err, agenda.ErrNoDailyAgenda) {
-			// If doesn't conform with daily agenda, check with the general agenda to see any match.
-			if err = h.agdCore.ConformGeneralAgendaBoundary(ctx, na.BusinessID, na.ScheduledOn); err != nil {
-				return errs.New(errs.InvalidArgument, err)
-			}
-		} else {
-			return errs.New(errs.InvalidArgument, err)
-		}
+	if err := h.agdCore.TimeWithinAgendaBoundary(ctx, na.BusinessID, na.ScheduledOn); err != nil {
+		return errs.NewFieldErrors("scheduled_on", err)
 	}
 
 	apt, err := h.aptCore.Create(ctx, na)

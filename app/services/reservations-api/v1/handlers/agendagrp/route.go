@@ -29,7 +29,7 @@ func Routes(app *web.App, cfg Config) {
 
 	usrCore := user.NewCore(cfg.Log, userdb.NewStore(cfg.Log, cfg.DB))
 	bsnCore := business.NewCore(cfg.Log, usrCore, businessdb.NewStore(cfg.Log, cfg.DB))
-	agdCore := agenda.NewCore(cfg.Log, agendadb.NewStore(cfg.Log, cfg.DB))
+	agdCore := agenda.NewCore(cfg.Log, bsnCore, agendadb.NewStore(cfg.Log, cfg.DB))
 
 	authen := mid.Authenticate(cfg.Auth)
 	ruleAdminOnly := mid.Authorize(cfg.Auth, auth.RuleAdminOnly)

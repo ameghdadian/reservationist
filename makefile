@@ -14,8 +14,13 @@ curl:
 curl-auth:
 	curl -il -H "Authorization: Bearer ${TOKEN}" http://localhost:3000/v1 
 
+users:
+	curl -il \
+	-H "Authorization: Bearer ${TOKEN}" "http://localhost:3000/v1/users?page=1&rows=2"
+
 load: 
-	hey -m GET -c 100 -n 100000 "http://localhost:3000/v1/hack"
+	hey -m GET -c 100 -n 1000 \
+	-H "Authorization: Bearer ${TOKEN}" "http://localhost:3000/v1/users?page=1&rows=2"
 
 admin:
 	go run app/tooling/reservations-admin/main.go
@@ -120,8 +125,12 @@ dev-up:
 
 	kubectl wait --timeout=120s --namespace=local-path-storage --for=condition=Available deployment/local-path-provisioner
 
-	kind load docker-image $(POSTGRES) --name $(KIND_CLUSTER)
-	kind load docker-image $(REDIS) --name $(KIND_CLUSTER)
+	kind load docker-image $(POSTGRES) --name $(KIND_CLUSTER) & \
+	kind load docker-image $(REDIS) --name $(KIND_CLUSTER) & \
+	kind load docker-image $(GRAFANA) --name $(KIND_CLUSTER) & \
+	kind load docker-image $(PROMETHEUS) --name $(KIND_CLUSTER) & \
+	kind load docker-image $(TEMPO) --name $(KIND_CLUSTER) & \
+	wait;
 
 dev-down:
 	kind delete cluster --name $(KIND_CLUSTER)
@@ -148,6 +157,10 @@ dev-apply:
 # --kubeconfig zarf/k8s/.kubeconfig.yaml
 	kubectl wait --timeout=120s --namespace=$(NAMESPACE) --for=condition=Ready pods -lapp=$(APP)
 
+	kubectl apply -R -f zarf/k8s/charts/tempo
+	kubectl apply -R -f zarf/k8s/charts/grafana
+	kubectl apply -R -f zarf/k8s/charts/prometheus
+
 dev-restart:
 	kubectl rollout restart deployment $(APP) --namespace=$(NAMESPACE)
 	kubectl rollout restart deployment $(WORKER) --namespace=$(NAMESPACE)
@@ -167,16 +180,25 @@ dev-logs-worker:
 dev-logs-db:
 	kubectl logs --namespace=$(NAMESPACE) -lapp=database --all-containers=true -f --tail=100
 
-dev-status:
+dev-status-all:
 	kubectl get nodes -o wide
 	kubectl get svc -o wide
 	kubectl get pods -o wide --watch --all-namespaces
+
+dev-status:
+	watch -n 2 kubectl get pods -o wide --all-namespaces
 
 dev-logs-init:
 	kubectl logs --namespace=$(NAMESPACE) -lapp=$(APP) -f --tail=100 -c init-migrate
 
 pgcli:
 	pgcli postgres://postgres:postgres@localhost
+
+# =============================================================================
+# Metrics and Tracing
+
+grafana:
+	open http://localhost:3100
 
 # =============================================================================
 # Modules Support
@@ -207,3 +229,10 @@ gen-coverage:
 
 view-coverage: gen-coverage
 	go tool cover -html=c.out
+
+# =============================================================================
+# Help command
+
+help:
+	@echo "Usage: make <commands>"
+	@echo ""

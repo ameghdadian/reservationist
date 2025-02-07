@@ -21,7 +21,7 @@ import (
 	"github.com/ameghdadian/service/business/web/v1/auth"
 	"github.com/ameghdadian/service/foundation/docker"
 	"github.com/ameghdadian/service/foundation/logger"
-	"github.com/ameghdadian/service/foundation/web"
+	"github.com/ameghdadian/service/foundation/otel"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/hibiken/asynq"
 	"github.com/jmoiron/sqlx"
@@ -132,7 +132,7 @@ func NewTest(t *testing.T, c *docker.Container, rc *docker.Container) *Test {
 	// -------------------------------------------------------------------------
 
 	var buf bytes.Buffer
-	log := logger.New(&buf, logger.LevelInfo, "TEST", func(context.Context) string { return web.GetTraceID(ctx) })
+	log := logger.New(&buf, logger.LevelInfo, "TEST", func(context.Context) string { return otel.GetTraceID(ctx) })
 
 	cOpt := asynq.RedisClientOpt{Addr: rc.Host}
 	taskClient := asynq.NewClient(cOpt)
@@ -255,7 +255,7 @@ func newCoreAPIs(log *logger.Logger, db *sqlx.DB, taskClient *asynq.Client, task
 	usrCore := user.NewCore(log, userdb.NewStore(log, db))
 	bsnCore := business.NewCore(log, usrCore, businessdb.NewStore(log, db))
 	aptCore := appointment.NewCore(log, usrCore, bsnCore, appointmentdb.NewStore(log, db), aptTask)
-	agdCore := agenda.NewCore(log, agendadb.NewStore(log, db))
+	agdCore := agenda.NewCore(log, bsnCore, agendadb.NewStore(log, db))
 
 	return CoreAPIs{
 		User:        usrCore,

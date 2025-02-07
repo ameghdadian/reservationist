@@ -8,6 +8,7 @@ import (
 
 	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/logger"
+	"github.com/ameghdadian/service/foundation/otel"
 	"github.com/ameghdadian/service/foundation/web"
 )
 
@@ -20,6 +21,10 @@ func Errors(log *logger.Logger) web.MidFunc {
 			if err == nil {
 				return resp
 			}
+
+			_, span := otel.AddSpan(ctx, "business.web.mid.error")
+			span.RecordError(err)
+			defer span.End()
 
 			var appErr *errs.Error
 			if !errors.As(err, &appErr) {

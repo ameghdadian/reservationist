@@ -12,6 +12,7 @@ import (
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
 	"github.com/ameghdadian/service/foundation/logger"
+	"github.com/ameghdadian/service/foundation/otel"
 	"github.com/google/uuid"
 )
 
@@ -81,6 +82,9 @@ func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error
 }
 
 func (c *Core) Create(ctx context.Context, na NewAppointment) (Appointment, error) {
+	ctx, span := otel.AddSpan(ctx, "business.appointment.create")
+	defer span.End()
+
 	usr, err := c.usrCore.QueryByID(ctx, na.UserID)
 	if err != nil {
 		return Appointment{}, fmt.Errorf("user.querybyid: %s: %w", na.UserID, err)
@@ -116,7 +120,7 @@ func (c *Core) Create(ctx context.Context, na NewAppointment) (Appointment, erro
 		return Appointment{}, ErrAlreadyReserved
 	}
 	if len(agds) > 1 {
-		return Appointment{}, fmt.Errorf("found unexpected number of entires(gt. 1)")
+		return Appointment{}, fmt.Errorf("found unexpected number of entries(gt. 1)")
 	}
 
 	now := time.Now()
@@ -145,7 +149,10 @@ func (c *Core) Create(ctx context.Context, na NewAppointment) (Appointment, erro
 
 func (c *Core) Update(ctx context.Context, apt Appointment, uapt UpdateAppointment) (Appointment, error) {
 	// TODO: Check given scheduled time is not already booked for this business.
-	// You might need to add a `QueryByScheduledOn` method to core/store/(app?) layer.
+	// It's already done once in Create Method above. See if you can Copy/Paste it.
+
+	ctx, span := otel.AddSpan(ctx, "business.appointment.update")
+	defer span.End()
 
 	// Query appointment to check if the scheduled time is not passed
 	// or appointment is not already cancelled
@@ -179,6 +186,9 @@ func (c *Core) Update(ctx context.Context, apt Appointment, uapt UpdateAppointme
 }
 
 func (c *Core) Delete(ctx context.Context, apt Appointment) error {
+	ctx, span := otel.AddSpan(ctx, "business.appointment.delete")
+	defer span.End()
+
 	if err := c.storer.Delete(ctx, apt); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
@@ -191,6 +201,9 @@ func (c *Core) Delete(ctx context.Context, apt Appointment) error {
 }
 
 func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Appointment, error) {
+	ctx, span := otel.AddSpan(ctx, "business.appointment.query")
+	defer span.End()
+
 	apts, err := c.storer.Query(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
@@ -200,10 +213,16 @@ func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By, 
 }
 
 func (c *Core) Count(ctx context.Context, filter QueryFilter) (int, error) {
+	ctx, span := otel.AddSpan(ctx, "business.appointment.count")
+	defer span.End()
+
 	return c.storer.Count(ctx, filter)
 }
 
 func (c *Core) QueryByID(ctx context.Context, aptID uuid.UUID) (Appointment, error) {
+	ctx, span := otel.AddSpan(ctx, "business.appointment.querybyid")
+	defer span.End()
+
 	apt, err := c.storer.QueryByID(ctx, aptID)
 	if err != nil {
 		return Appointment{}, fmt.Errorf("query: appointmentID[%s]: %w", aptID, err)
@@ -213,6 +232,9 @@ func (c *Core) QueryByID(ctx context.Context, aptID uuid.UUID) (Appointment, err
 }
 
 func (c *Core) QueryByUserID(ctx context.Context, usrID uuid.UUID) ([]Appointment, error) {
+	ctx, span := otel.AddSpan(ctx, "business.appointment.querybyuserid")
+	defer span.End()
+
 	apts, err := c.storer.QueryByUserID(ctx, usrID)
 	if err != nil {
 		return nil, fmt.Errorf("query: userID[%s]: %w", usrID, err)
@@ -222,6 +244,9 @@ func (c *Core) QueryByUserID(ctx context.Context, usrID uuid.UUID) ([]Appointmen
 }
 
 func (c *Core) QueryByBusinessID(ctx context.Context, bsnID uuid.UUID) ([]Appointment, error) {
+	ctx, span := otel.AddSpan(ctx, "business.appointment.querybybusinessid")
+	defer span.End()
+
 	apts, err := c.storer.QueryByBusinessID(ctx, bsnID)
 	if err != nil {
 		return nil, fmt.Errorf("query: businessID[%s]: %w", bsnID, err)

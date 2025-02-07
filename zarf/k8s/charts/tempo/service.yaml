@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: reservations-system
+spec:
+  type: ClusterIP
+  selector:
+    app: tempo
+  ports:
+    - port: 14268
+      name: "14268"
+    - port: 3200
+      name: "3200"
+    - port: 4317
+      name: "4317"
+    - port: 4318
+      name: "4318"
+    - port: 9411
+      name: "9411"

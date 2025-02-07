@@ -1,6 +1,8 @@
 package otel
 
-import "go.opentelemetry.io/otel/sdk/trace"
+import (
+	"go.opentelemetry.io/otel/sdk/trace"
+)
 
 type endpointExcluder struct {
 	endpoints   map[string]struct{}
@@ -18,9 +20,8 @@ func newEndpointExcluder(endpoints map[string]struct{}, probability float64) end
 // endpoints from being added to the trace.
 func (ee endpointExcluder) ShouldSample(parameters trace.SamplingParameters) trace.SamplingResult {
 	for i := range parameters.Attributes {
-		att := parameters.Attributes[i]
-		if att.Key == "http.target" {
-			if _, exists := ee.endpoints[att.Value.AsString()]; exists {
+		if parameters.Attributes[i].Key == "http.target" {
+			if _, exists := ee.endpoints[parameters.Attributes[i].Value.AsString()]; exists {
 				return trace.SamplingResult{Decision: trace.Drop}
 			}
 		}
@@ -29,7 +30,7 @@ func (ee endpointExcluder) ShouldSample(parameters trace.SamplingParameters) tra
 	return trace.TraceIDRatioBased(ee.probability).ShouldSample(parameters)
 }
 
-// Description implements the sampler interface
+// Description implements the sampler interface.
 func (endpointExcluder) Description() string {
 	return "customSampler"
 }

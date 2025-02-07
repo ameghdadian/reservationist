@@ -16,7 +16,7 @@ func Logger(log *logger.Logger) web.MidFunc {
 	m := func(next web.HandlerFunc) web.HandlerFunc {
 
 		h := func(ctx context.Context, r *http.Request) web.Encoder {
-			v := web.GetValues(ctx)
+			now := time.Now()
 
 			path := r.URL.Path
 			if r.URL.RawQuery != "" {
@@ -40,7 +40,7 @@ func Logger(log *logger.Logger) web.MidFunc {
 			}
 
 			log.Info(ctx, "request completed", "method", r.Method, "path", path,
-				"remoteaddr", r.RemoteAddr, "statuscode", statusCode, "since", time.Since(v.Now))
+				"remoteaddr", r.RemoteAddr, "statuscode", statusCode, "since", time.Since(now))
 
 			return resp
 		}

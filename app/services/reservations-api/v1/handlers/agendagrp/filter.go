@@ -105,7 +105,7 @@ func parseDailyAgendaFilter(qp dailyAgendaQueryParams) (agenda.DAQueryFilter, er
 		d, err := time.Parse(time.DateOnly, qp.Date)
 		switch err {
 		case nil:
-			filter.WithDate(d.Format(time.DateOnly))
+			filter.WithDate(d.UTC())
 		default:
 			fieldErrors.Add("date", err)
 		}

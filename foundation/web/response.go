@@ -37,14 +37,13 @@ func Respond(ctx context.Context, w http.ResponseWriter, r *http.Request, dataMo
 		}
 	}
 
-	var statusCode int
-	switch r.Method {
-	case http.MethodPost:
+	statusCode := http.StatusOK
+	// Setting preferred status code for HTTP operations
+	if r.Method == http.MethodPost {
 		statusCode = http.StatusCreated
-	default:
-		statusCode = http.StatusOK
 	}
 
+	// Override status code if any of these applies
 	switch v := dataModel.(type) {
 	case httpStatus:
 		statusCode = v.HTTPStatus()
@@ -60,8 +59,6 @@ func Respond(ctx context.Context, w http.ResponseWriter, r *http.Request, dataMo
 
 	_, span := addSpan(ctx, "web.send.response", attribute.Int("status", statusCode))
 	defer span.End()
-
-	SetStatusCode(ctx, statusCode)
 
 	if statusCode == http.StatusNoContent {
 		w.WriteHeader(statusCode)

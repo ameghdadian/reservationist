@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/ameghdadian/service/foundation/logger"
+	"github.com/ameghdadian/service/foundation/otel"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
@@ -108,6 +110,9 @@ func StatusCheck(ctx context.Context, db *sqlx.DB) error {
 func NamedExecContext(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any) error {
 	q := queryString(query, data)
 
+	ctx, span := otel.AddSpan(ctx, "business.data.pgx.exec", attribute.String("query", q))
+	defer span.End()
+
 	if _, ok := data.(struct{}); ok {
 		log.Infoc(ctx, 5, "database.NamedExecContext", "query", q)
 	} else {
@@ -138,6 +143,9 @@ func NamedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContex
 
 func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest any, withIn bool) error {
 	q := queryString(query, data)
+
+	ctx, span := otel.AddSpan(ctx, "business.data.pgx.querystruct", attribute.String("query", q))
+	defer span.End()
 
 	log.Infoc(ctx, 5, "database.NamedQueryStruct", "query", q)
 
@@ -193,6 +201,9 @@ func NamedQuerySlice[T any](ctx context.Context, log *logger.Logger, db sqlx.Ext
 
 func namedQuerySlice[T any](ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest *[]T, withIn bool) error {
 	q := queryString(query, data)
+
+	ctx, span := otel.AddSpan(ctx, "business.data.pgx.queryslice", attribute.String("query", q))
+	defer span.End()
 
 	log.Infoc(ctx, 5, "database.NamedQuerySlice", "query", q)
 

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-deployment
+  namespace: reservations-system
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.55.0
+          args:
+            - "--storage.tsdb.retention.time=1m"
+            - "--config.file=/prom-conf/prometheus.yaml"
+            - "--storage.tsdb.path=/prometheus/"
+            - "--log.level=debug"
+          ports:
+            - name: prometheus
+              containerPort: 9090
+              hostPort: 9090
+          resources:
+            requests:
+              cpu: 100m
+            limits:
+              cpu: 3400m
+          volumeMounts:
+            - name: config-volume
+              mountPath: /prom-conf/
+      volumes:
+        - name: config-volume
+          configMap:
+            name: prometheus-conf

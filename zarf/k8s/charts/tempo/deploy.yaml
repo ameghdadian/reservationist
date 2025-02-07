@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: reservations-system
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 0
+  selector: 
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      namespace: reservations-system
+      labels:
+        app: tempo
+    spec:
+      containers:
+        - image: grafana/tempo:2.6.0
+          name: tempo
+          ports:
+            - containerPort: 14268
+              hostPort: 14268
+            - containerPort: 3200
+              hostPort: 3200
+            - containerPort: 4317
+              hostPort: 4317
+            - containerPort: 4318
+              hostPort: 4318
+            - containerPort: 9411
+              hostPort: 9411
+          args:
+            - -config.file=/tempo-conf/tempo.yaml
+          volumeMounts:
+            - name: config-volume
+              mountPath: /tempo-conf
+          resources:
+            requests:
+              cpu: 100m
+            limits:
+              cpu: 3400m
+      volumes:
+        - name: config-volume
+          configMap:
+            name: tempo-conf

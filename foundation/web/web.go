@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
-	"github.com/google/uuid"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -30,19 +29,34 @@ type Logger func(ctx context.Context, msg string, args ...any)
 type App struct {
 	log    Logger
 	tracer trace.Tracer
-	*http.ServeMux
-	mw []MidFunc
+	mux    *http.ServeMux
+	otmux  http.Handler
+	mw     []MidFunc
 }
 
 func NewApp(log Logger, tracer trace.Tracer, mw ...MidFunc) *App {
+	mux := http.NewServeMux()
+
 	return &App{
-		log:      log,
-		tracer:   tracer,
-		ServeMux: http.NewServeMux(),
-		mw:       mw,
+		log:    log,
+		tracer: tracer,
+		mux:    mux,
+		otmux:  otelhttp.NewHandler(mux, "http request"),
+		mw:     mw,
 	}
 }
 
+// ServeHTTP implements the http.Handler interface. It's the entry point for
+// all http traffic and allows the opentelemetry mux to run first to handle
+// tracing. The opentelemetry mux then calls the application mux to handle
+// application traffic. This was set up in the NewApp function.
+func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.otmux.ServeHTTP(w, r)
+}
+
+// HandleNoMiddleware sets a handler function for a given HTTP method and path
+// pair to the application server mux. Does not include the application
+// middleware or OTEL tracing.
 func (a *App) HandleNoMiddleware(method string, group string, path string, handler HandlerFunc) {
 	a.handle(method, group, path, handler)
 }
@@ -62,12 +76,6 @@ func (a *App) handle(method string, group string, path string, handler HandlerFu
 
 		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(w.Header()))
 
-		v := Values{
-			TraceID: uuid.NewString(),
-			Now:     time.Now().UTC(),
-		}
-		ctx = SetValues(ctx, &v)
-
 		resp := handler(ctx, r)
 		if err := Respond(ctx, w, r, resp); err != nil {
 			a.log(ctx, "web-respond", "ERROR", err)
@@ -82,5 +90,5 @@ func (a *App) handle(method string, group string, path string, handler HandlerFu
 
 	pattern := fmt.Sprintf("%s %s", method, finalPath)
 
-	a.ServeMux.HandleFunc(pattern, h)
+	a.mux.HandleFunc(pattern, h)
 }

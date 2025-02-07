@@ -19,7 +19,6 @@ import (
 	"github.com/ameghdadian/service/foundation/keystore"
 	"github.com/ameghdadian/service/foundation/logger"
 	"github.com/ameghdadian/service/foundation/otel"
-	"github.com/ameghdadian/service/foundation/web"
 	"github.com/ardanlabs/conf/v3"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -35,7 +34,7 @@ func Main(build string, routeAdder mux.RouterAdder) error {
 	}
 
 	traceIDFunc := func(ctx context.Context) string {
-		return web.GetTraceID(ctx)
+		return otel.GetTraceID(ctx)
 	}
 
 	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RESERVATIONS-API", traceIDFunc, events)
@@ -275,6 +274,7 @@ func InitTaskWorkers(build string, taskRouter mux.TaskRouter) error {
 	}
 
 	traceIDFunc := func(ctx context.Context) string {
+		// TODO: Change it to otel.GetTraceID(ctx)
 		return uuid.NewString()
 	}
 
