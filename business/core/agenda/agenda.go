@@ -4,18 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
+	"github.com/ameghdadian/service/business/core/business"
 	"github.com/ameghdadian/service/business/data/order"
 	"github.com/ameghdadian/service/business/data/page"
 	"github.com/ameghdadian/service/business/data/transaction"
+	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/ameghdadian/service/foundation/logger"
+	"github.com/ameghdadian/service/foundation/otel"
 	"github.com/google/uuid"
 )
 
 var (
 	ErrNotFound       = errors.New("agenda is not found")
-	ErrOutOfRange     = errors.New("time is out of range")
+	ErrOutOfRange     = errors.New("selected time is not within business working hours")
 	ErrIntervalAbused = errors.New("interval is not respected")
 	ErrNoDailyAgenda  = errors.New("no daily agenda found")
 	ErrBusinessOff    = errors.New("business has no activity at given date")
@@ -40,14 +44,16 @@ type Storer interface {
 }
 
 type Core struct {
-	storer Storer
-	log    *logger.Logger
+	storer  Storer
+	bsnCore *business.Core
+	log     *logger.Logger
 }
 
-func NewCore(log *logger.Logger, storer Storer) *Core {
+func NewCore(log *logger.Logger, bsnCore *business.Core, storer Storer) *Core {
 	return &Core{
-		storer: storer,
-		log:    log,
+		storer:  storer,
+		bsnCore: bsnCore,
+		log:     log,
 	}
 }
 
@@ -66,6 +72,9 @@ func (c *Core) ExecuteUnderTransaction(tx transaction.Transaction) (*Core, error
 }
 
 func (c *Core) CreateGeneralAgenda(ctx context.Context, na NewGeneralAgenda) (GeneralAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.create")
+	defer span.End()
+
 	now := time.Now()
 
 	agd := GeneralAgenda{
@@ -87,6 +96,9 @@ func (c *Core) CreateGeneralAgenda(ctx context.Context, na NewGeneralAgenda) (Ge
 }
 
 func (c *Core) UpdateGenralAgenda(ctx context.Context, agd GeneralAgenda, uAgd UpdateGeneralAgenda) (GeneralAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.update")
+	defer span.End()
+
 	if uAgd.OpensAt != nil {
 		agd.OpensAt = *uAgd.OpensAt
 	}
@@ -112,6 +124,9 @@ func (c *Core) UpdateGenralAgenda(ctx context.Context, agd GeneralAgenda, uAgd U
 }
 
 func (c *Core) DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.delete")
+	defer span.End()
+
 	if err := c.storer.DeleteGeneralAgenda(ctx, agd); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
@@ -120,6 +135,9 @@ func (c *Core) DeleteGeneralAgenda(ctx context.Context, agd GeneralAgenda) error
 }
 
 func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, orderBy order.By, page page.Page) ([]GeneralAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.query")
+	defer span.End()
+
 	agds, err := c.storer.QueryGeneralAgenda(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
@@ -129,6 +147,9 @@ func (c *Core) QueryGeneralAgenda(ctx context.Context, filter GAQueryFilter, ord
 }
 
 func (c *Core) QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UUID) (GeneralAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.querybybusinessid")
+	defer span.End()
+
 	agd, err := c.storer.QueryGeneralAgendaByBusinessID(ctx, bsnID)
 	if err != nil {
 		return GeneralAgenda{}, fmt.Errorf("query: bsnID[%s]: %w", bsnID, err)
@@ -138,6 +159,9 @@ func (c *Core) QueryGeneralAgendaByBusinessID(ctx context.Context, bsnID uuid.UU
 }
 
 func (c *Core) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (GeneralAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.querybyid")
+	defer span.End()
+
 	agd, err := c.storer.QueryGeneralAgendaByID(ctx, agdID)
 	if err != nil {
 		return GeneralAgenda{}, fmt.Errorf("query: agdID[%s]: %w", agdID, err)
@@ -147,30 +171,36 @@ func (c *Core) QueryGeneralAgendaByID(ctx context.Context, agdID uuid.UUID) (Gen
 }
 
 func (c *Core) CountGeneralAgenda(ctx context.Context, filter GAQueryFilter) (int, error) {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.count")
+	defer span.End()
+
 	return c.storer.CountGeneralAgenda(ctx, filter)
 }
 
-// ConformsGeneralAgendaBoundary checks two things:
+// conformsGeneralAgendaBoundary checks two things:
 // 1. Whether check time is placed inside inclusive opening and closing business agenda,
 // 2. And if check time conforms with interval requirement.
-func (c *Core) ConformGeneralAgendaBoundary(ctx context.Context, bsnID uuid.UUID, checkTime time.Time) error {
+func (c *Core) conformGeneralAgendaBoundary(ctx context.Context, bsnID uuid.UUID, checkTime time.Time) error {
+	ctx, span := otel.AddSpan(ctx, "business.generalagenda.conformboundary")
+	defer span.End()
+
 	agd, err := c.storer.QueryGeneralAgendaByBusinessID(ctx, bsnID)
 	if err != nil {
 		return fmt.Errorf("query: bsnID[%s]: %w", bsnID, err)
 	}
 
-	opens := agd.OpensAt.UTC().Hour()*3600 + agd.OpensAt.UTC().Minute()*60 + agd.OpensAt.UTC().Second()
-	closed := agd.ClosedAt.UTC().Hour()*3600 + agd.ClosedAt.UTC().Minute()*60 + agd.ClosedAt.UTC().Second()
-	check := checkTime.UTC().Hour()*3600 + checkTime.UTC().Minute()*60 + checkTime.UTC().Second()
+	opens := agd.OpensAt.UTC()
+	closed := agd.ClosedAt.UTC()
+	check := checkTime.UTC()
 
-	if check < opens || check >= closed {
+	if check.Before(opens) || check.Equal(closed) || check.After(closed) {
 		return ErrOutOfRange
 	}
 
 	interval := agd.Interval
-	checkpoint := check - opens
+	checkpoint := check.Sub(opens).Seconds()
 
-	if checkpoint%interval != 0 {
+	if int(math.Ceil(checkpoint))%interval != 0 {
 		return ErrIntervalAbused
 	}
 
@@ -180,6 +210,9 @@ func (c *Core) ConformGeneralAgendaBoundary(ctx context.Context, bsnID uuid.UUID
 // -------------------------------------------------------------------------------------------------------
 
 func (c *Core) CreateDailyAgenda(ctx context.Context, na NewDailyAgenda) (DailyAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.dailyagenda.create")
+	defer span.End()
+
 	now := time.Now()
 
 	agd := DailyAgenda{
@@ -188,7 +221,6 @@ func (c *Core) CreateDailyAgenda(ctx context.Context, na NewDailyAgenda) (DailyA
 		OpensAt:      na.OpensAt,
 		ClosedAt:     na.ClosedAt,
 		Interval:     na.Interval,
-		Date:         na.Date,
 		Availability: na.Availability,
 		DateCreated:  now,
 		DateUpdated:  now,
@@ -202,6 +234,9 @@ func (c *Core) CreateDailyAgenda(ctx context.Context, na NewDailyAgenda) (DailyA
 }
 
 func (c *Core) UpdateDailyAgenda(ctx context.Context, agd DailyAgenda, uAgd UpdateDailyAgenda) (DailyAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.dailyagenda.update")
+	defer span.End()
+
 	if uAgd.OpensAt != nil {
 		agd.OpensAt = *uAgd.OpensAt
 	}
@@ -212,10 +247,6 @@ func (c *Core) UpdateDailyAgenda(ctx context.Context, agd DailyAgenda, uAgd Upda
 
 	if uAgd.Interval != nil {
 		agd.Interval = *uAgd.Interval
-	}
-
-	if uAgd.Date != nil {
-		agd.Date = *uAgd.Date
 	}
 
 	if uAgd.Availability != nil {
@@ -232,6 +263,9 @@ func (c *Core) UpdateDailyAgenda(ctx context.Context, agd DailyAgenda, uAgd Upda
 }
 
 func (c *Core) DeleteDailyAgenda(ctx context.Context, agd DailyAgenda) error {
+	ctx, span := otel.AddSpan(ctx, "business.dailyagenda.delete")
+	defer span.End()
+
 	if err := c.storer.DeleteDailyAgenda(ctx, agd); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
@@ -240,6 +274,9 @@ func (c *Core) DeleteDailyAgenda(ctx context.Context, agd DailyAgenda) error {
 }
 
 func (c *Core) QueryDailyAgenda(ctx context.Context, filter DAQueryFilter, orderBy order.By, page page.Page) ([]DailyAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.dailyagenda.query")
+	defer span.End()
+
 	agds, err := c.storer.QueryDailyAgenda(ctx, filter, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
@@ -249,10 +286,16 @@ func (c *Core) QueryDailyAgenda(ctx context.Context, filter DAQueryFilter, order
 }
 
 func (c *Core) CountDailyAgenda(ctx context.Context, filter DAQueryFilter) (int, error) {
+	ctx, span := otel.AddSpan(ctx, "business.dailyagenda.count")
+	defer span.End()
+
 	return c.storer.CountDailyAgenda(ctx, filter)
 }
 
 func (c *Core) QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (DailyAgenda, error) {
+	ctx, span := otel.AddSpan(ctx, "business.dailyagenda.querybyid")
+	defer span.End()
+
 	agd, err := c.storer.QueryDailyAgendaByID(ctx, agdID)
 	if err != nil {
 		return DailyAgenda{}, fmt.Errorf("query: dailyAgendaID[%s]: %w", agdID, err)
@@ -261,13 +304,16 @@ func (c *Core) QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (Daily
 	return agd, nil
 }
 
-// ConformsDailyAgendaBoundary checks two things:
+// conformsDailyAgendaBoundary checks two things:
 // 1. Whether check time is placed inside inclusive opening and closing business agenda,
 // 2. And if check time conforms with interval requirement.
-func (c *Core) ConformDailyAgendaBoundary(ctx context.Context, bsnID uuid.UUID, checkTime time.Time) error {
+func (c *Core) conformDailyAgendaBoundary(ctx context.Context, bsnID uuid.UUID, checkTime time.Time) error {
+	ctx, span := otel.AddSpan(ctx, "business.dailyagenda.conformboundary")
+	defer span.End()
+
 	var filter DAQueryFilter
 	filter.WithBusinessID(bsnID)
-	filter.WithDate(checkTime.UTC().Format(time.DateOnly))
+	filter.WithDate(checkTime.UTC())
 
 	pagination, err := page.Parse("1", "10")
 	if err != nil {
@@ -286,16 +332,16 @@ func (c *Core) ConformDailyAgendaBoundary(ctx context.Context, bsnID uuid.UUID, 
 	for i := range agds {
 		if agds[i].Availability {
 
-			opens := agds[i].OpensAt.UTC().Hour()*3600 + agds[i].OpensAt.UTC().Minute()*60 + agds[i].OpensAt.UTC().Second()
-			closed := agds[i].ClosedAt.UTC().Hour()*3600 + agds[i].ClosedAt.UTC().Minute()*60 + agds[i].ClosedAt.UTC().Second()
-			check := checkTime.UTC().Hour()*3600 + checkTime.UTC().Minute()*60 + checkTime.UTC().Second()
+			opens := agds[i].OpensAt.UTC()
+			closed := agds[i].ClosedAt.UTC()
+			check := checkTime.UTC()
 
-			if check >= opens || check < closed {
+			if (check.Equal(opens) || check.After(opens)) && check.Before(closed) {
 
 				interval := agds[i].Interval
-				checkpoint := check - opens
+				checkpoint := check.Sub(opens).Seconds()
 
-				if checkpoint%interval != 0 {
+				if int(math.Ceil(checkpoint))%interval != 0 {
 					err = ErrIntervalAbused
 					break
 				}
@@ -309,4 +355,22 @@ func (c *Core) ConformDailyAgendaBoundary(ctx context.Context, bsnID uuid.UUID, 
 	}
 
 	return err
+}
+
+// -------------------------------------------------------------------------------------------------------
+
+func (c *Core) TimeWithinAgendaBoundary(ctx context.Context, bsnID uuid.UUID, checkTime time.Time) error {
+	err := c.conformDailyAgendaBoundary(ctx, bsnID, checkTime)
+	if err != nil {
+		if !errors.Is(err, ErrNoDailyAgenda) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+
+		// If doesn't conform with daily agenda, check with the general agenda to see any match.
+		if err = c.conformGeneralAgendaBoundary(ctx, bsnID, checkTime); err != nil {
+			return errs.New(errs.InvalidArgument, err)
+		}
+	}
+
+	return nil
 }

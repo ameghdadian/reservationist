@@ -228,9 +228,9 @@ func (s *Store) CountGeneralAgenda(ctx context.Context, filter agenda.GAQueryFil
 func (s *Store) CreateDailyAgenda(ctx context.Context, agd agenda.DailyAgenda) error {
 	const q = `
 	INSERT INTO daily_agenda
-		(id, business_id, opens_at, closed_at, interval, applicable_date, availability, date_created, date_updated)
+		(id, business_id, opens_at, closed_at, interval, availability, date_created, date_updated)
 	VALUES
-		(:id, :business_id, :opens_at, :closed_at, :interval, :applicable_date, :availability, :date_created, :date_updated)
+		(:id, :business_id, :opens_at, :closed_at, :interval, :availability, :date_created, :date_updated)
 	`
 
 	if err := db.NamedExecContext(ctx, s.log, s.db, q, toDBDailyAgenda(agd)); err != nil {
@@ -248,7 +248,6 @@ func (s *Store) UpdateDailyAgenda(ctx context.Context, agd agenda.DailyAgenda) e
 		"opens_at" = :opens_at,
 		"closed_at" = :closed_at,
 		"interval" = :interval,
-		"applicable_date" = :applicable_date,
 		"date_updated" = :date_updated
 	WHERE
 		"id" = :id
@@ -290,7 +289,7 @@ func (s *Store) QueryDailyAgenda(ctx context.Context, filter agenda.DAQueryFilte
 
 	const q = `
 	SELECT 	
-		id, business_id, opens_at, closed_at, interval, applicable_date, availability, date_created, date_updated
+		id, business_id, opens_at, closed_at, interval, availability, date_created, date_updated
 	FROM
 		daily_agenda
 	`
@@ -352,7 +351,7 @@ func (s *Store) QueryDailyAgendaByID(ctx context.Context, agdID uuid.UUID) (agen
 
 	const q = `
 	SELECT 	
-		id, business_id, opens_at, closed_at, interval, applicable_date, availability, date_created, date_updated
+		id, business_id, opens_at, closed_at, interval, availability, date_created, date_updated
 	FROM 
 		daily_agenda
 	WHERE

@@ -13,6 +13,10 @@ import (
 	"github.com/ameghdadian/service/business/core/user"
 )
 
+const (
+	appTimeFormat = time.TimeOnly + " Z0700"
+)
+
 func toAppUser(usr user.User) usergrp.AppUser {
 	roles := make([]string, len(usr.Roles))
 	for i, role := range usr.Roles {
@@ -112,8 +116,8 @@ func toAppGeneralAgenda(agd agenda.GeneralAgenda) agendagrp.AppGeneralAgenda {
 	return agendagrp.AppGeneralAgenda{
 		ID:          agd.ID.String(),
 		BusinessID:  agd.BusinessID.String(),
-		OpensAt:     agd.OpensAt.Format(time.RFC3339),
-		ClosedAt:    agd.ClosedAt.Format(time.RFC3339),
+		OpensAt:     agd.OpensAt.Format(appTimeFormat),
+		ClosedAt:    agd.ClosedAt.Format(appTimeFormat),
 		Interval:    int(agd.Interval),
 		WorkingDays: days,
 		DateCreated: "",
@@ -142,7 +146,6 @@ func toAppDailyAgenda(agd agenda.DailyAgenda) agendagrp.AppDailyAgenda {
 		OpensAt:      agd.OpensAt.Format(time.RFC3339),
 		ClosedAt:     agd.ClosedAt.Format(time.RFC3339),
 		Interval:     int(time.Duration(agd.Interval)),
-		Date:         agd.Date.Format(time.DateOnly),
 		Availability: agd.Availability,
 		DateCreated:  "",
 		DateUpdated:  "",

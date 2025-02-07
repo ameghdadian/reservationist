@@ -353,15 +353,12 @@ func crud(t *testing.T) {
 
 	loc, _ = time.LoadLocation("America/New_York")
 	now = time.Now()
-	tommorow := now.AddDate(0, 0, 1)
 
 	nda := agenda.NewDailyAgenda{
-		BusinessID: sd.bsns[1].ID,
-		OpensAt:    time.Date(now.Year(), now.Month(), now.Day(), 14, 10, 0, 0, loc),
-		ClosedAt:   time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc),
-		Interval:   60 * 20,
-		// Dates are stored in DB based on UTC timezone, and returned in time.Local. We're doing the same here to mimic that behavior.
-		Date:         time.Date(tommorow.Year(), tommorow.Month(), tommorow.Day(), 0, 0, 0, 0, time.UTC).In(time.Local),
+		BusinessID:   sd.bsns[1].ID,
+		OpensAt:      time.Date(now.Year(), now.Month(), now.Day(), 14, 10, 0, 0, loc),
+		ClosedAt:     time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc),
+		Interval:     60 * 20,
 		Availability: true,
 	}
 

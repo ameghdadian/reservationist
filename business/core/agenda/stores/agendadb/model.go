@@ -83,7 +83,6 @@ type dbDailyAgenda struct {
 	OpensAt      sql.NullTime  `db:"opens_at"`
 	ClosedAt     sql.NullTime  `db:"closed_at"`
 	Interval     sql.NullInt64 `db:"interval"`
-	Date         time.Time     `db:"applicable_date"`
 	Availability bool          `db:"availability"`
 	DateCreated  time.Time     `db:"date_created"`
 	DateUpdated  time.Time     `db:"date_updated"`
@@ -105,7 +104,6 @@ func toDBDailyAgenda(gAgd agenda.DailyAgenda) dbDailyAgenda {
 			Int64: int64(gAgd.Interval),
 			Valid: gAgd.Interval > 0,
 		},
-		Date:         gAgd.Date.UTC(),
 		Availability: true,
 		DateCreated:  gAgd.DateCreated.UTC(),
 		DateUpdated:  gAgd.DateUpdated.UTC(),
@@ -119,7 +117,6 @@ func toCoreDailyAgenda(dbAgd dbDailyAgenda) (agenda.DailyAgenda, error) {
 		OpensAt:      dbAgd.OpensAt.Time.In(time.Local),
 		ClosedAt:     dbAgd.ClosedAt.Time.In(time.Local),
 		Interval:     int(dbAgd.Interval.Int64),
-		Date:         dbAgd.Date.In(time.Local),
 		Availability: dbAgd.Availability,
 		DateCreated:  dbAgd.DateCreated.In(time.Local),
 		DateUpdated:  dbAgd.DateUpdated.In(time.Local),

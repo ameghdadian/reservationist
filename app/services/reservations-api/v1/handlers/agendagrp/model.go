@@ -11,6 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// This turns the time into ISO8601, changing the timezone accordingly.
+	// For example: "15:45:00 +3300" or for UTC time, "15:45:00 Z".
+	// For more description, refer to stdlib time:format.go:81.
+	appTimeFormat = time.TimeOnly + " Z0700"
+)
+
 type generalAgendaQueryParams struct {
 	Page       string
 	Rows       string
@@ -58,8 +65,8 @@ func toAppGeneralAgenda(agd agenda.GeneralAgenda) AppGeneralAgenda {
 	return AppGeneralAgenda{
 		ID:          agd.ID.String(),
 		BusinessID:  agd.BusinessID.String(),
-		OpensAt:     agd.OpensAt.Format(time.RFC3339),
-		ClosedAt:    agd.ClosedAt.Format(time.RFC3339),
+		OpensAt:     agd.OpensAt.Format(appTimeFormat),
+		ClosedAt:    agd.ClosedAt.Format(appTimeFormat),
 		Interval:    agd.Interval,
 		WorkingDays: days,
 		DateCreated: agd.DateCreated.Format(time.RFC3339),
@@ -116,10 +123,6 @@ func toCoreNewGeneralAgenda(app AppNewGeneralAgenda) (agenda.NewGeneralAgenda, e
 	cld, err := time.Parse(time.RFC3339, app.ClosedAt)
 	if err != nil {
 		return agenda.NewGeneralAgenda{}, fmt.Errorf("parsing closed at: %w", err)
-	}
-
-	if opn.Format(time.DateOnly) != cld.Format(time.DateOnly) {
-		return agenda.NewGeneralAgenda{}, errors.New("opening and closing hour can not be in two separate days")
 	}
 
 	if cld.Before(opn) {
@@ -209,7 +212,6 @@ type AppDailyAgenda struct {
 	OpensAt      string `json:"opens_at"`
 	ClosedAt     string `json:"closed_at"`
 	Interval     int    `json:"interval"`
-	Date         string `json:"date"`
 	Availability bool   `json:"availability"`
 	DateCreated  string `json:"-"`
 	DateUpdated  string `json:"-"`
@@ -227,7 +229,6 @@ func toAppDailyAgenda(agd agenda.DailyAgenda) AppDailyAgenda {
 		OpensAt:      agd.OpensAt.Format(time.RFC3339),
 		ClosedAt:     agd.ClosedAt.Format(time.RFC3339),
 		Interval:     agd.Interval,
-		Date:         agd.Date.Format(time.DateOnly),
 		Availability: agd.Availability,
 		DateCreated:  agd.DateCreated.Format(time.RFC3339),
 		DateUpdated:  agd.DateUpdated.Format(time.RFC3339),
@@ -250,7 +251,6 @@ type AppNewDailyAgenda struct {
 	OpensAt      string `json:"opens_at" validate:"required_if=Availability true"`
 	ClosedAt     string `json:"closed_at" validate:"required_if=Availability true"`
 	Interval     int    `json:"interval" validate:"gt=0,lte=86400,required_if=Availability true"`
-	Date         string `json:"date" validate:"required"`
 	Availability bool   `json:"availability" validate:"required"`
 }
 
@@ -266,11 +266,6 @@ func toCoreNewDailyAgenda(app AppNewDailyAgenda) (agenda.NewDailyAgenda, error) 
 	bsnID, err := uuid.Parse(app.BusinessID)
 	if err != nil {
 		return agenda.NewDailyAgenda{}, fmt.Errorf("parsing business id: %w", err)
-	}
-
-	date, err := time.Parse(time.DateOnly, app.Date)
-	if err != nil {
-		return agenda.NewDailyAgenda{}, fmt.Errorf("parsing date: %w", err)
 	}
 
 	opn, err := time.Parse(time.RFC3339, app.OpensAt)
@@ -295,7 +290,6 @@ func toCoreNewDailyAgenda(app AppNewDailyAgenda) (agenda.NewDailyAgenda, error) 
 		OpensAt:      opn,
 		ClosedAt:     cld,
 		Interval:     app.Interval,
-		Date:         date,
 		Availability: app.Availability,
 	}, nil
 }
@@ -306,7 +300,6 @@ type AppUpdateDailyAgenda struct {
 	OpensAt      *string `json:"opens_at" validate:"omitempty,required_if=Availability true"`
 	ClosedAt     *string `json:"closed_at" validate:"omitempty,required_if=Availability true"`
 	Interval     *int    `json:"interval" validate:"omitempty,gt=0,lte=86400,required_if=Availability true"`
-	Date         *string `json:"date" validate:"required"`
 	Availability *bool   `json:"availability" validate:"required"`
 }
 
@@ -334,20 +327,10 @@ func toCoreUpdateDailyAgenda(app AppUpdateDailyAgenda) (agenda.UpdateDailyAgenda
 		}
 	}
 
-	var date *time.Time
-	if app.Date != nil {
-		d, err := time.Parse(time.DateOnly, *app.Date)
-		if err != nil {
-			return agenda.UpdateDailyAgenda{}, fmt.Errorf("parsing date: %w", err)
-		}
-		date = TimePointer(d)
-	}
-
 	return agenda.UpdateDailyAgenda{
 		OpensAt:      opn,
 		ClosedAt:     cld,
 		Interval:     app.Interval,
-		Date:         date,
 		Availability: app.Availability,
 	}, nil
 

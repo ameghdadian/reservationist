@@ -2,6 +2,7 @@ package agenda
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ameghdadian/service/foundation/errs"
 	"github.com/google/uuid"
@@ -33,10 +34,10 @@ func (qf *GAQueryFilter) WithBusinessID(bsnID uuid.UUID) {
 type DAQueryFilter struct {
 	ID         *uuid.UUID `validate:"omitempty,uuid"`
 	BusinessID *uuid.UUID `validate:"omitempty,uuid"`
-	Date       *string    `validadte:"omitempty,excluded_with=From To Days"`
+	Date       *time.Time `validadte:"omitempty,excluded_with=From To Days"`
 	From       *string    `validate:"omitempty,required_with=To"`
 	To         *string    `validate:"omitempty,required_with=From"`
-	Days       *int       `validate:"omitempty,number,lte=30,excluded_with=From To Date"`
+	Days       *int       `validate:"omitempty,number,lte=30,excluded_with=From To Date"` // Filters based on following n days
 }
 
 func (qf *DAQueryFilter) Validate() error {
@@ -55,7 +56,7 @@ func (qf *DAQueryFilter) WithBusinessID(id uuid.UUID) {
 	qf.BusinessID = &id
 }
 
-func (qf *DAQueryFilter) WithDate(date string) {
+func (qf *DAQueryFilter) WithDate(date time.Time) {
 	qf.Date = &date
 }
 

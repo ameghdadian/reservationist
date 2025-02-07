@@ -149,7 +149,7 @@ func Test_Web(t *testing.T) {
 	t.Run("createBusiness200", tests.createBusiness200(sd))
 	t.Run("createAppointment200", tests.createAppointment200(sd))
 	t.Run("createGeneralAgenda200", tests.createGeneralAgenda200(sd))
-	// t.Run("createDailyAgenda200", tests.createDailyAgenda200(sd))
+	t.Run("createDailyAgenda200", tests.createDailyAgenda200(sd))
 }
 
 func (wt *WebTests) query200(sd seedData) func(t *testing.T) {
@@ -461,7 +461,7 @@ func (wt *WebTests) createBusiness200(sd seedData) func(t *testing.T) {
 }
 
 func (wt *WebTests) createAppointment200(sd seedData) func(t *testing.T) {
-	sch := sd.generalAgendas[0].OpensAt.Add(1 * time.Hour).UTC().Format(time.RFC3339)
+	sch := sd.generalAgendas[0].OpensAt.Add(time.Hour)
 
 	return func(t *testing.T) {
 		table := []struct {
@@ -478,14 +478,14 @@ func (wt *WebTests) createAppointment200(sd seedData) func(t *testing.T) {
 					BusinessID:  sd.businesses[0].ID.String(),
 					UserID:      sd.users[0].ID.String(),
 					Status:      appointment.StatusScheduled.Status(),
-					ScheduledOn: sch,
+					ScheduledOn: sch.Format(time.RFC3339),
 				},
 				resp: &appointmentgrp.AppAppointment{},
 				expResp: &appointmentgrp.AppAppointment{
 					BusinessID:  sd.businesses[0].ID.String(),
 					UserID:      sd.users[0].ID.String(),
 					Status:      appointment.StatusScheduled.Status(),
-					ScheduledOn: sch,
+					ScheduledOn: sch.In(time.Local).Format(time.RFC3339),
 				},
 			},
 		}
@@ -558,8 +558,8 @@ func (wt *WebTests) createGeneralAgenda200(sd seedData) func(t *testing.T) {
 				resp: &agendagrp.AppGeneralAgenda{},
 				expResp: &agendagrp.AppGeneralAgenda{
 					BusinessID:  sd.businesses[1].ID.String(),
-					OpensAt:     time.Date(now.Year(), now.Month(), now.Day(), 10, 12, 0, 0, loc).Format(time.RFC3339),
-					ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc).Format(time.RFC3339),
+					OpensAt:     time.Date(now.Year(), now.Month(), now.Day(), 10, 12, 0, 0, loc).Format(appTimeFormat),
+					ClosedAt:    time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc).Format(appTimeFormat),
 					Interval:    2 * 60 * 60, // Every 2 hours
 					WorkingDays: []int{1, 5},
 				},
@@ -613,7 +613,6 @@ func (wt *WebTests) createGeneralAgenda200(sd seedData) func(t *testing.T) {
 func (wt *WebTests) createDailyAgenda200(sd seedData) func(t *testing.T) {
 	loc, _ := time.LoadLocation("America/New_York")
 	now := time.Now()
-	scheduledDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 2)
 
 	return func(t *testing.T) {
 		table := []struct {
@@ -631,7 +630,6 @@ func (wt *WebTests) createDailyAgenda200(sd seedData) func(t *testing.T) {
 					OpensAt:      time.Date(now.Year(), now.Month(), now.Day(), 10, 12, 0, 0, loc).Format(time.RFC3339),
 					ClosedAt:     time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc).Format(time.RFC3339),
 					Interval:     2 * 60 * 60, // Every 2 hours
-					Date:         scheduledDate.Format(time.RFC3339),
 					Availability: true,
 				},
 				resp: &agendagrp.AppDailyAgenda{},
@@ -640,7 +638,6 @@ func (wt *WebTests) createDailyAgenda200(sd seedData) func(t *testing.T) {
 					OpensAt:      time.Date(now.Year(), now.Month(), now.Day(), 10, 12, 0, 0, loc).Format(time.RFC3339),
 					ClosedAt:     time.Date(now.Year(), now.Month(), now.Day(), 20, 0, 0, 0, loc).Format(time.RFC3339),
 					Interval:     2 * 60 * 60, // Every 2 hours
-					Date:         scheduledDate.Format(time.DateOnly),
 					Availability: true,
 				},
 			},
@@ -655,7 +652,7 @@ func (wt *WebTests) createDailyAgenda200(sd seedData) func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, tt.url, bytes.NewBuffer(d))
 			w := httptest.NewRecorder()
 
-			r.Header.Set("Authorization", "Bearer "+wt.adminToken)
+			r.Header.Set("Authorization", "Bearer "+wt.userToken)
 			wt.app.ServeHTTP(w, r)
 
 			if w.Code != http.StatusCreated {
@@ -667,12 +664,12 @@ func (wt *WebTests) createDailyAgenda200(sd seedData) func(t *testing.T) {
 				t.Errorf("%s: Should be able to unmarshal the respones: %s", tt.name, err)
 			}
 
-			gotResp, exists := tt.resp.(*agendagrp.AppGeneralAgenda)
+			gotResp, exists := tt.resp.(*agendagrp.AppDailyAgenda)
 			if !exists {
 				t.Fatalf("error occurred")
 			}
 
-			expResp := tt.expResp.(*agendagrp.AppGeneralAgenda)
+			expResp := tt.expResp.(*agendagrp.AppDailyAgenda)
 			expResp.ID = gotResp.ID
 			expResp.DateCreated = gotResp.DateCreated
 			expResp.DateUpdated = gotResp.DateUpdated
